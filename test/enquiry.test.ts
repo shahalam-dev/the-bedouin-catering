@@ -1,15 +1,20 @@
+import { createExecutionContext, waitOnExecutionContext } from 'cloudflare:test'
 import { env } from 'cloudflare:workers'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import app from '../src/index'
 import { createBranch } from '../src/db/branches'
 import { createCuisine } from '../src/db/cuisines'
-import { listEnquiries } from '../src/db/enquiries'
+import { createEnquiry, getEnquiryById, listEnquiries } from '../src/db/enquiries'
 import { createPackage } from '../src/db/packages'
+import { enquiryAlert, notifyEnquiry } from '../src/lib/email'
 import { formatRM } from '../src/lib/format'
 import { enquirySchema, todayInMalaysia } from '../src/lib/validation'
 
+
 const db = env.DB
-const testEnv = { ...env, TURNSTILE_SECRET: 'test-secret' }
+// NOTIFY_TO stays empty here, so route tests skip the alert.
+const testEnv = { ...env, TURNSTILE_SECRET: 'test-secret', NOTIFY_TO: '' }
+const mailEnv = (send: (...a: unknown[]) => unknown) => ({ ...env, NOTIFY_TO: 'staff@gmail.com', EMAIL: { send } as unknown as SendEmail })
 
 let packageId: number
 let draftPackageId: number
@@ -18,8 +23,13 @@ let draftPackageId: number
 const siteverify = (success: boolean) =>
   vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ success }))
 
-const post = (fields: Record<string, string>, query = '') =>
-  app.request(`/api/enquiries${query}`, { method: 'POST', body: new URLSearchParams(fields) }, testEnv)
+// Waits for waitUntil() work (the email alert) so tests can check its effects.
+const post = async (fields: Record<string, string>, query = '', e: Env = testEnv) => {
+  const ctx = createExecutionContext()
+  const res = await app.request(`/api/enquiries${query}`, { method: 'POST', body: new URLSearchParams(fields) }, e, ctx)
+  await waitOnExecutionContext(ctx)
+  return res
+}
 
 const valid = { name: 'Aisha', phone: '+60 12-345 6789', 'cf-turnstile-response': 'token' }
 
@@ -37,7 +47,9 @@ beforeEach(async () => {
   draftPackageId = await createPackage(db, { ...pkg, slug: 'p2', name: 'P2', status: 'draft' })
 })
 
-afterEach(() => vi.restoreAllMocks())
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 describe('POST /api/enquiries', () => {
   it('saves a valid enquiry and redirects to the thank-you page', async () => {
@@ -47,7 +59,8 @@ describe('POST /api/enquiries', () => {
     expect(res.status).toBe(303)
     expect(res.headers.get('Location')).toBe('/contact?sent=1&lang=bm')
     const [saved] = await listEnquiries(db)
-    expect(saved).toMatchObject({ name: 'Aisha', email: 'a@example.com', pax: 80, package_id: packageId, message: 'Hi', status: 'new', notified_at: null })
+    expect(saved).toMatchObject({ name: 'Aisha', email: 'a@example.com', pax: 80, package_id: packageId, message: 'Hi', status: 'new' })
+    expect(saved!.notified_at).toBeNull()
 
     const sent = fetch.mock.calls[0]![1]!.body as FormData
     expect(sent.get('secret')).toBe('test-secret')
@@ -104,6 +117,41 @@ describe('GET /contact', () => {
   it('pre-selects the package from ?package=', async () => {
     const html = await (await app.request('/contact?package=p1', {}, testEnv)).text()
     expect(html).toContain(`<option value="${packageId}" selected="">P1`)
+  })
+})
+
+describe('alert email', () => {
+  const input = { name: 'Aisha', phone: '012', email: 'a@example.com', event_date: null, pax: null, branch_id: null, cuisine_id: null, package_id: null, message: null }
+  const noOptions = { branches: [], cuisines: [], packages: [] }
+
+  it('sends the alert and marks the enquiry notified', async () => {
+    const id = await createEnquiry(db, input)
+    const send = vi.fn().mockResolvedValue({ messageId: 'm1' })
+    await notifyEnquiry(mailEnv(send), id, input, noOptions)
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ from: expect.objectContaining({ email: env.NOTIFY_FROM }), to: 'staff@gmail.com', replyTo: 'a@example.com' }))
+    expect((await getEnquiryById(db, id))!.notified_at).not.toBeNull()
+  })
+
+  it('keeps the enquiry unnotified when sending fails', async () => {
+    const id = await createEnquiry(db, input)
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    await notifyEnquiry(mailEnv(vi.fn().mockRejectedValue(new Error('E_SENDER_NOT_VERIFIED'))), id, input, noOptions)
+    expect((await getEnquiryById(db, id))!.notified_at).toBeNull()
+  })
+
+  it('skips sending when email is not configured', async () => {
+    const id = await createEnquiry(db, input)
+    const send = vi.fn()
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await notifyEnquiry({ ...mailEnv(send), NOTIFY_TO: '' }, id, input, noOptions)
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('lists filled fields with names and prices', () => {
+    const o = { branches: [{ id: 1, name: 'Shah Alam' }], cuisines: [], packages: [{ id: 2, name: 'Kabsa Feast', price_sen: 3500 }] } as never
+    const m = enquiryAlert(7, { name: 'Aisha', phone: '012', email: null, event_date: null, pax: 80, branch_id: 1, cuisine_id: null, package_id: 2, message: null }, o)
+    expect(m.subject).toBe('New enquiry #7 from Aisha')
+    expect(m.text).toBe('Name: Aisha\nPhone: 012\nGuests: 80\nBranch: Shah Alam\nPackage: Kabsa Feast (RM 35 / pax)')
   })
 })
 

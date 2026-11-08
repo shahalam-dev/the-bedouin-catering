@@ -25,9 +25,18 @@
       "bucket_name": "catering-media"
     }
   ],
+  // Cloudflare Email Sending. The sender domain must be onboarded in Email Service first.
+  "send_email": [{ "name": "EMAIL" }],
+  "routes": [{ "pattern": "bedouin.ssalam.co.uk", "custom_domain": true }],
   "vars": {
-    // Public Turnstile site key. This is Cloudflare's always-pass TEST key: replace it with the
-    // real widget's site key before launch. The secret goes in TURNSTILE_SECRET (wrangler secret put).
-    "TURNSTILE_SITE_KEY": "1x00000000000000000000AA"
+    // Sender for enquiry alerts; must be on the onboarded domain. Recipient is the NOTIFY_TO secret.
+    "NOTIFY_FROM": "enquiries@ssalam.co.uk",
+    // Public Turnstile site key for bedouin.ssalam.co.uk. The secret is the TURNSTILE_SECRET Worker secret;
+    // Local dev overrides this with the test site key + test secret in .dev.vars.
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAF4m-1yy7CpkwZNE",
+    // Cloudflare Access for /admin: team domain (e.g. "bedouin.cloudflareaccess.com") and the Access
+    // application's Audience (AUD) tag. /admin answers 503 until both are set.
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": ""
   }
 }

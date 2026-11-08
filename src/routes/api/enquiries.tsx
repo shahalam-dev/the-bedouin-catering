@@ -1,12 +1,13 @@
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { createEnquiry } from '../../db/enquiries'
+import { notifyEnquiry } from '../../lib/email'
 import { getLang, withLang } from '../../lib/i18n'
 import { verifyTurnstile } from '../../lib/turnstile'
 import { enquirySchema, type EnquiryField } from '../../lib/validation'
 import { loadContactOptions, renderContact } from '../public/contact'
 
-// Public enquiry form POST: validate -> verify Turnstile -> save to D1 -> redirect.
+// Public enquiry form POST: validate -> verify Turnstile -> save to D1 -> redirect -> email alert.
 
 const stringValues = (body: Record<string, unknown>) =>
   Object.fromEntries(Object.entries(body).filter((e): e is [string, string] => typeof e[1] === 'string'))
@@ -50,9 +51,9 @@ enquiries.post(
     }
 
     const { 'cf-turnstile-response': _token, ...enquiry } = data
-    await createEnquiry(c.env.DB, enquiry)
-    // shortcut: no email notification yet. notified_at stays NULL, so listUnnotifiedEnquiries()
-    // can send these once email is set up (Cloudflare Email Sending).
+    const id = await createEnquiry(c.env.DB, enquiry)
+    // Saved first; the alert runs after the redirect is sent and cannot lose the enquiry.
+    c.executionCtx.waitUntil(notifyEnquiry(c.env, id, enquiry, options))
 
     return c.redirect(withLang('/contact?sent=1', getLang(c.req.query('lang'))), 303)
   },
