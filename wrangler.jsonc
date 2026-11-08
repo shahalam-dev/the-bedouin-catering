@@ -1,13 +1,16 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "the-bedouin-catering",
-  "main": "src/index.ts",
+  "main": "src/index.tsx",
   "compatibility_date": "2026-11-07",
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "catering-db",
-      "database_id": "dcfe0aa1-4131-492b-84d1-0b8adcbaa967"
+      "database_id": "dcfe0aa1-4131-492b-84d1-0b8adcbaa967",
+      "migrations_dir": "migrations",
+      // Only numbered files are migrations, so migrations/seed.sql never runs on apply.
+      "migrations_pattern": "migrations/0*.sql"
     }
   ],
   "kv_namespaces": [
@@ -15,37 +18,16 @@
       "binding": "KV",
       "id": "87c00d5da38941589bd26bd6323fa084"
     }
-  ]
-  // "compatibility_flags": [
-  //   "nodejs_compat"
-  // ],
-  // "vars": {
-  //   "MY_VAR": "my-variable"
-  // },
-  // "kv_namespaces": [
-  //   {
-  //     "binding": "MY_KV_NAMESPACE",
-  //     "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  //   }
-  // ],
-  // "r2_buckets": [
-  //   {
-  //     "binding": "MY_BUCKET",
-  //     "bucket_name": "my-bucket"
-  //   }
-  // ],
-  // "d1_databases": [
-  //   {
-  //     "binding": "MY_DB",
-  //     "database_name": "my-database",
-  //     "database_id": ""
-  //   }
-  // ],
-  // "ai": {
-  //   "binding": "AI"
-  // },
-  // "observability": {
-  //   "enabled": true,
-  //   "head_sampling_rate": 1
-  // }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "catering-media"
+    }
+  ],
+  "vars": {
+    // Public Turnstile site key. This is Cloudflare's always-pass TEST key: replace it with the
+    // real widget's site key before launch. The secret goes in TURNSTILE_SECRET (wrangler secret put).
+    "TURNSTILE_SITE_KEY": "1x00000000000000000000AA"
+  }
 }

@@ -1,0 +1,207 @@
+import { useRequestContext } from 'hono/jsx-renderer'
+
+export type Lang = 'en' | 'bm'
+
+const en = {
+  siteName: 'The Bedouin Catering',
+  skipToContent: 'Skip to content',
+  mainNav: 'Main',
+  footerNav: 'Footer',
+  nav: {
+    home: 'Home',
+    packages: 'Packages',
+    menu: 'Menu',
+    occasions: 'Occasions',
+    contact: 'Contact',
+  },
+  menuToggle: 'Menu',
+  language: 'Language',
+  getQuote: 'Get a Quote',
+  whatsapp: 'Chat with us on WhatsApp',
+  footerTagline:
+    'Warm, generous catering for weddings, corporate events, birthdays, aqiqah and open houses.',
+  rights: 'All rights reserved.',
+  perPax: '/ pax',
+  minPax: (n: number) => `Min. ${n} pax`,
+  popular: 'Popular',
+  remove: (label: string) => `Remove ${label}`,
+  back: 'Back',
+  next: 'Next',
+  enquire: 'Enquire',
+  home: {
+    title: 'Catering for Every Occasion',
+    heroTitle: 'Feasts to Remember',
+    heroLead: 'Generous platters, warm hospitality and food that brings everyone to the table.',
+    viewPackages: 'View Packages',
+  },
+  packages: {
+    title: 'Our Packages',
+    lead: 'Choose your branch and cuisine, and we will show you the packages that fit.',
+    steps: { branch: 'Branch', cuisine: 'Cuisine', package: 'Package' },
+    stepsLabel: 'Package selection steps',
+    stepDone: 'completed',
+    chooseBranch: 'Choose a Branch',
+    chooseCuisine: 'Choose a Cuisine',
+    choosePackage: 'Choose a Package',
+    selections: 'Your selections',
+    none: 'No packages are available here yet. Please choose another option or contact us.',
+  },
+  menu: {
+    title: 'Our Menu',
+    lead: 'A taste of what we cook for your guests.',
+    filterLabel: 'Filter by cuisine',
+    all: 'All',
+    none: 'No dishes to show yet.',
+  },
+  occasions: {
+    title: 'Occasions We Cater',
+    lead: 'From intimate gatherings to grand celebrations.',
+    none: 'Occasions are coming soon.',
+    cta: 'Planning an event? Tell us about it.',
+  },
+  contact: {
+    title: 'Get a Quote',
+    lead: 'Tell us about your event and we will get back to you within one working day.',
+    sent: 'Thank you! We have received your enquiry and will contact you soon.',
+    fields: {
+      name: 'Name',
+      phone: 'Phone',
+      email: 'Email (optional)',
+      event_date: 'Event date (optional)',
+      pax: 'Number of guests (optional)',
+      branch_id: 'Branch (optional)',
+      cuisine_id: 'Cuisine (optional)',
+      package_id: 'Package (optional)',
+      message: 'Message (optional)',
+    },
+    notSure: 'Not sure yet',
+    submit: 'Send Enquiry',
+    errors: {
+      name: 'Please enter your name (2 to 100 characters).',
+      phone: 'Please enter a valid phone number, for example +60 12-345 6789.',
+      email: 'Please enter a valid email address.',
+      event_date: 'Please choose a date from today onwards.',
+      pax: 'Please enter a number of guests between 1 and 10,000.',
+      branch_id: 'Please choose a branch from the list.',
+      cuisine_id: 'Please choose a cuisine from the list.',
+      package_id: 'Please choose a package from the list.',
+      message: 'Please keep your message under 2,000 characters.',
+    },
+    formError: 'Please check the highlighted fields.',
+    turnstileError: 'We could not verify that you are human. Please try again.',
+    noScript: 'This form needs JavaScript for spam protection. You can also reach us on WhatsApp.',
+  },
+}
+
+type Strings = typeof en
+
+const bm: Strings = {
+  siteName: 'The Bedouin Catering',
+  skipToContent: 'Langkau ke kandungan',
+  mainNav: 'Utama',
+  footerNav: 'Kaki halaman',
+  nav: {
+    home: 'Utama',
+    packages: 'Pakej',
+    menu: 'Menu',
+    occasions: 'Majlis',
+    contact: 'Hubungi',
+  },
+  menuToggle: 'Menu',
+  language: 'Bahasa',
+  getQuote: 'Dapatkan Sebut Harga',
+  whatsapp: 'Berbual dengan kami di WhatsApp',
+  footerTagline:
+    'Katering yang mesra dan murah hati untuk majlis perkahwinan, korporat, hari jadi, aqiqah dan rumah terbuka.',
+  rights: 'Hak cipta terpelihara.',
+  perPax: '/ pax',
+  minPax: (n: number) => `Min. ${n} pax`,
+  popular: 'Popular',
+  remove: (label: string) => `Buang ${label}`,
+  back: 'Kembali',
+  next: 'Seterusnya',
+  enquire: 'Tanya',
+  home: {
+    title: 'Katering untuk Setiap Majlis',
+    heroTitle: 'Jamuan yang Dikenang',
+    heroLead: 'Hidangan yang melimpah, layanan yang mesra dan makanan yang menyatukan semua.',
+    viewPackages: 'Lihat Pakej',
+  },
+  packages: {
+    title: 'Pakej Kami',
+    lead: 'Pilih cawangan dan masakan, dan kami akan tunjukkan pakej yang sesuai.',
+    steps: { branch: 'Cawangan', cuisine: 'Masakan', package: 'Pakej' },
+    stepsLabel: 'Langkah pemilihan pakej',
+    stepDone: 'selesai',
+    chooseBranch: 'Pilih Cawangan',
+    chooseCuisine: 'Pilih Masakan',
+    choosePackage: 'Pilih Pakej',
+    selections: 'Pilihan anda',
+    none: 'Belum ada pakej di sini. Sila pilih pilihan lain atau hubungi kami.',
+  },
+  menu: {
+    title: 'Menu Kami',
+    lead: 'Sedikit rasa hidangan yang kami masak untuk tetamu anda.',
+    filterLabel: 'Tapis mengikut masakan',
+    all: 'Semua',
+    none: 'Belum ada hidangan untuk dipaparkan.',
+  },
+  occasions: {
+    title: 'Majlis yang Kami Sediakan',
+    lead: 'Dari majlis kecil hingga sambutan besar-besaran.',
+    none: 'Senarai majlis akan datang.',
+    cta: 'Merancang majlis? Ceritakan kepada kami.',
+  },
+  contact: {
+    title: 'Dapatkan Sebut Harga',
+    lead: 'Ceritakan tentang majlis anda dan kami akan menghubungi anda dalam satu hari bekerja.',
+    sent: 'Terima kasih! Kami telah menerima pertanyaan anda dan akan menghubungi anda tidak lama lagi.',
+    fields: {
+      name: 'Nama',
+      phone: 'Telefon',
+      email: 'E-mel (pilihan)',
+      event_date: 'Tarikh majlis (pilihan)',
+      pax: 'Bilangan tetamu (pilihan)',
+      branch_id: 'Cawangan (pilihan)',
+      cuisine_id: 'Masakan (pilihan)',
+      package_id: 'Pakej (pilihan)',
+      message: 'Mesej (pilihan)',
+    },
+    notSure: 'Belum pasti',
+    submit: 'Hantar Pertanyaan',
+    errors: {
+      name: 'Sila masukkan nama anda (2 hingga 100 aksara).',
+      phone: 'Sila masukkan nombor telefon yang sah, contohnya +60 12-345 6789.',
+      email: 'Sila masukkan alamat e-mel yang sah.',
+      event_date: 'Sila pilih tarikh mulai hari ini.',
+      pax: 'Sila masukkan bilangan tetamu antara 1 hingga 10,000.',
+      branch_id: 'Sila pilih cawangan daripada senarai.',
+      cuisine_id: 'Sila pilih masakan daripada senarai.',
+      package_id: 'Sila pilih pakej daripada senarai.',
+      message: 'Sila hadkan mesej anda kepada 2,000 aksara.',
+    },
+    formError: 'Sila semak ruangan yang ditandakan.',
+    turnstileError: 'Kami tidak dapat mengesahkan anda manusia. Sila cuba lagi.',
+    noScript: 'Borang ini memerlukan JavaScript untuk perlindungan spam. Anda juga boleh hubungi kami di WhatsApp.',
+  },
+}
+
+const strings: Record<Lang, Strings> = { en, bm }
+
+export const htmlLang: Record<Lang, string> = { en: 'en', bm: 'ms' }
+
+export function getLang(query: string | undefined): Lang {
+  return query === 'bm' ? 'bm' : 'en'
+}
+
+// shortcut: language lives in ?lang=bm so pages stay cacheable; switch to /bm/ path prefixes if SEO per language matters.
+export function withLang(path: string, lang: Lang): string {
+  if (lang !== 'bm') return path
+  return `${path}${path.includes('?') ? '&' : '?'}lang=bm`
+}
+
+/** Current language and strings, for components rendered inside jsxRenderer. */
+export function useI18n(): { lang: Lang; t: Strings } {
+  const lang = getLang(useRequestContext().req.query('lang'))
+  return { lang, t: strings[lang] }
+}
