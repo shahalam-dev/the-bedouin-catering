@@ -33,6 +33,11 @@ const en = {
     heroTitle: 'Feasts to Remember',
     heroLead: 'Generous platters, warm hospitality and food that brings everyone to the table.',
     viewPackages: 'View Packages',
+    popularTitle: 'Popular Packages',
+    popularLead: 'Our most-loved spreads, ready for your guests.',
+    allPackages: 'See All Packages',
+    testimonialsTitle: 'What Our Guests Say',
+    rating: (n: number) => `${n} out of 5 stars`,
   },
   packages: {
     title: 'Our Packages',
@@ -126,6 +131,11 @@ const bm: Strings = {
     heroTitle: 'Jamuan yang Dikenang',
     heroLead: 'Hidangan yang melimpah, layanan yang mesra dan makanan yang menyatukan semua.',
     viewPackages: 'Lihat Pakej',
+    popularTitle: 'Pakej Popular',
+    popularLead: 'Hidangan kegemaran pelanggan kami, sedia untuk tetamu anda.',
+    allPackages: 'Lihat Semua Pakej',
+    testimonialsTitle: 'Kata Pelanggan Kami',
+    rating: (n: number) => `${n} daripada 5 bintang`,
   },
   packages: {
     title: 'Pakej Kami',
