@@ -639,7 +639,118 @@ textarea.input {
 .notice--success { border-left-color: var(--success); }
 .notice--error { border-left-color: var(--error); }
 
+/* Home: hero */
+.hero {
+  display: flex;
+  align-items: center;
+  min-height: 70vh;
+  padding-block: var(--section-pad-mobile);
+  background: linear-gradient(var(--overlay), var(--overlay)), var(--ink);
+  background-size: cover;
+  background-position: center;
+  text-align: center;
+}
+.hero__inner {
+  max-width: 800px;
+}
+.hero .display {
+  margin: 0 0 var(--space-4);
+}
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+/* Home: occasion strip (marquee) */
+.occasion-strip {
+  overflow: hidden;
+  padding-block: var(--space-4);
+  border-block: 1px solid var(--sand);
+}
+.occasion-strip__track {
+  display: flex;
+  width: max-content;
+  animation: marquee 40s linear infinite;
+}
+.occasion-strip:hover .occasion-strip__track {
+  animation-play-state: paused;
+}
+.occasion-strip ul {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.occasion-strip li {
+  color: var(--primary);
+  font-family: var(--font-script);
+  font-size: var(--fs-h1);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.occasion-strip li::after {
+  content: "·";
+  padding-inline: var(--space-5);
+}
+@keyframes marquee {
+  to { transform: translateX(-50%); }
+}
+
+.section__more {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-6);
+}
+
+/* Home: testimonials */
+.testimonials {
+  background: var(--grey-50);
+}
+.testimonial-card {
+  gap: var(--space-4);
+  margin: 0;
+  padding: var(--space-5);
+}
+.testimonial-card:hover {
+  transform: none;
+}
+.testimonial-card__stars {
+  display: flex;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--primary);
+}
+.testimonial-card__stars svg {
+  fill: currentColor;
+}
+.testimonial-card blockquote {
+  margin: 0;
+  font-size: var(--fs-body-l);
+  font-style: italic;
+}
+.testimonial-card blockquote p {
+  margin: 0;
+}
+.testimonial-card figcaption {
+  display: grid;
+  gap: var(--space-1);
+  margin-top: auto;
+}
+.testimonial-card__name {
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: var(--fs-h4);
+  font-weight: 700;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .occasion-strip { overflow-x: auto; }
+  .occasion-strip__track {
+    animation: none;
+  }
   .card:hover,
   .whatsapp-fab:hover {
     transform: none;
