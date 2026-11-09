@@ -68,7 +68,7 @@ describe('Cloudflare Access', () => {
   const withToken = (jwt: string) => app.request('/admin/packages', { headers: { 'Cf-Access-Jwt-Assertion': jwt } }, accessEnv)
 
   it('answers 503 when Access is not configured, and never caches it', async () => {
-    const res = await get('/admin/packages', { ...env, ADMIN_DEV_EMAIL: '' } as Env)
+    const res = await get('/admin/packages', { ...env, ADMIN_DEV_EMAIL: '', ACCESS_TEAM_DOMAIN: '', ACCESS_AUD: '' } as unknown as Env)
     expect(res.status).toBe(503)
     expect(res.headers.get('Cache-Control')).toBe('no-store')
   })
