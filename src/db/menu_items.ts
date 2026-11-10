@@ -1,4 +1,4 @@
-import { changed, type Status } from './shared'
+import { changed, type Status, type WithImage } from './shared'
 
 export type MenuItem = {
   id: number
@@ -24,18 +24,19 @@ const fromRow = (r: Row): MenuItem => ({ ...r, is_bestseller: r.is_bestseller ==
 export async function listPublishedMenuItems(
   db: D1Database,
   filter: { cuisineId?: number; bestsellersOnly?: boolean } = {},
-): Promise<MenuItem[]> {
+): Promise<(MenuItem & WithImage)[]> {
   const { results } = await db
     .prepare(
-      `SELECT * FROM menu_items
-       WHERE status = 'published'
-         AND (?1 IS NULL OR cuisine_id = ?1)
-         AND (?2 = 0 OR is_bestseller = 1)
-       ORDER BY sort_order, name`,
+      `SELECT i.*, m.r2_key AS image_key, m.alt AS image_alt FROM menu_items i
+       LEFT JOIN media m ON m.id = i.image_id
+       WHERE i.status = 'published'
+         AND (?1 IS NULL OR i.cuisine_id = ?1)
+         AND (?2 = 0 OR i.is_bestseller = 1)
+       ORDER BY i.sort_order, i.name`,
     )
     .bind(filter.cuisineId ?? null, filter.bestsellersOnly ? 1 : 0)
-    .all<Row>()
-  return results.map(fromRow)
+    .all<Row & WithImage>()
+  return results.map((r) => ({ ...r, is_bestseller: r.is_bestseller === 1 }))
 }
 
 export async function listMenuItems(db: D1Database): Promise<MenuItem[]> {

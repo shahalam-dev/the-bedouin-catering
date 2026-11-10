@@ -2,24 +2,26 @@ import { Hono } from 'hono'
 import { listPublishedBranches, type Branch } from '../../db/branches'
 import { listCuisinesForBranch, type Cuisine } from '../../db/cuisines'
 import { listPublishedPackages, type PackageWithNames } from '../../db/packages'
+import type { WithImage } from '../../db/shared'
 import { useI18n, withLang } from '../../lib/i18n'
 import { Button } from '../../views/components/Button'
 import { CheckIcon, XIcon } from '../../views/components/Icons'
 import { PackageCard } from '../../views/components/PackageCard'
+import { Photo } from '../../views/components/Photo'
 import { SectionTitle } from '../../views/components/SectionTitle'
 import { Stepper } from '../../views/components/Stepper'
 
 // Package selector: branch -> cuisine -> packages, driven by ?branch=<slug>&cuisine=<slug>.
 // Each step is a plain GET form, so it works without JavaScript.
 
-type Option = { slug: string; name: string; description?: string | null }
+type Option = WithImage & { slug: string; name: string; description?: string | null }
 
 const OptionCards = ({ name, options }: { name: 'branch' | 'cuisine'; options: Option[] }) => (
   <div class="option-grid">
     {options.map((o) => (
       <label class="option-card">
         <input type="radio" name={name} value={o.slug} required checked={options.length === 1 || undefined} class="visually-hidden" />
-        <span class="option-card__photo" aria-hidden="true" />
+        <Photo image={o} class="option-card__photo" />
         <span class="option-card__name">{o.name}</span>
         {o.description && <span class="caption">{o.description}</span>}
         <span class="option-card__check" aria-hidden="true">
@@ -42,9 +44,9 @@ const Chip = ({ label, href }: { label: string; href: string }) => {
 }
 
 type Props = {
-  branches: Branch[]
+  branches: (Branch & WithImage)[]
   branch?: Branch
-  cuisines: Cuisine[]
+  cuisines: (Cuisine & WithImage)[]
   cuisine?: Cuisine
   packages: PackageWithNames[]
 }

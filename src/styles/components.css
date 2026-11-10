@@ -280,6 +280,14 @@
   aspect-ratio: 16 / 10;
   background: var(--sand);
 }
+/* Shared by <Photo>: a real <img> or the <span> placeholder, same box either way. */
+.card__photo,
+.category-card__photo,
+.option-card__photo {
+  display: block;
+  width: 100%;
+  object-fit: cover;
+}
 .card__body {
   display: flex;
   flex: 1;

@@ -1,4 +1,4 @@
-import { changed, type Status } from './shared'
+import { changed, type Status, type WithImage } from './shared'
 
 export type Cuisine = {
   id: number
@@ -14,25 +14,30 @@ export type Cuisine = {
 
 export type CuisineInput = Omit<Cuisine, 'id' | 'created_at' | 'updated_at'>
 
-export async function listPublishedCuisines(db: D1Database): Promise<Cuisine[]> {
+export async function listPublishedCuisines(db: D1Database): Promise<(Cuisine & WithImage)[]> {
   const { results } = await db
-    .prepare("SELECT * FROM cuisines WHERE status = 'published' ORDER BY sort_order, name")
-    .all<Cuisine>()
+    .prepare(
+      `SELECT c.*, m.r2_key AS image_key, m.alt AS image_alt FROM cuisines c
+       LEFT JOIN media m ON m.id = c.image_id
+       WHERE c.status = 'published' ORDER BY c.sort_order, c.name`,
+    )
+    .all<Cuisine & WithImage>()
   return results
 }
 
 /** Package selector step 2: published cuisines that have a published package at this branch. */
-export async function listCuisinesForBranch(db: D1Database, branchId: number): Promise<Cuisine[]> {
+export async function listCuisinesForBranch(db: D1Database, branchId: number): Promise<(Cuisine & WithImage)[]> {
   const { results } = await db
     .prepare(
-      `SELECT c.* FROM cuisines c
+      `SELECT c.*, m.r2_key AS image_key, m.alt AS image_alt FROM cuisines c
+       LEFT JOIN media m ON m.id = c.image_id
        WHERE c.status = 'published'
          AND EXISTS (SELECT 1 FROM packages p
                      WHERE p.cuisine_id = c.id AND p.branch_id = ? AND p.status = 'published')
        ORDER BY c.sort_order, c.name`,
     )
     .bind(branchId)
-    .all<Cuisine>()
+    .all<Cuisine & WithImage>()
   return results
 }
 
