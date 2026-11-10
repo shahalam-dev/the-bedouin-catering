@@ -3,13 +3,13 @@ import { formatRM } from '../../lib/format'
 import { useI18n, withLang } from '../../lib/i18n'
 import { Button } from './Button'
 import { CheckIcon } from './Icons'
+import { Photo } from './Photo'
 
 export const PackageCard = ({ pkg }: { pkg: PackageWithNames }) => {
   const { lang, t } = useI18n()
   return (
     <article class="card package-card">
-      {/* shortcut: placeholder until package photos are served from R2 via /media/:key */}
-      <div class="card__photo" aria-hidden="true" />
+      <Photo image={pkg} class="card__photo" />
       {pkg.is_popular && <span class="tag tag--popular">{t.popular}</span>}
       <div class="card__body">
         <h3>{pkg.name}</h3>

@@ -1,10 +1,11 @@
 import type { MenuItem } from '../../db/menu_items'
+import type { WithImage } from '../../db/shared'
 import { formatRM } from '../../lib/format'
+import { Photo } from './Photo'
 
-export const MenuCard = ({ item }: { item: MenuItem }) => (
+export const MenuCard = ({ item }: { item: MenuItem & WithImage }) => (
   <article class="card menu-card">
-    {/* shortcut: placeholder until dish photos are served from R2 via /media/:key */}
-    <div class="card__photo" aria-hidden="true" />
+    <Photo image={item} class="card__photo" />
     <div class="card__body">
       <div class="menu-card__head">
         <h4>{item.name}</h4>

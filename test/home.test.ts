@@ -38,3 +38,23 @@ describe('home page', () => {
     expect(html).not.toContain('Kata Pelanggan Kami')
   })
 })
+
+describe('card photos', () => {
+  it('renders the package image with its alt text, and a placeholder without one', async () => {
+    const media = await db
+      .prepare("INSERT INTO media (r2_key, folder, alt, content_type, size_bytes) VALUES ('packages/x.webp', 'packages', 'Lamb mandi on rice', 'image/webp', 1) RETURNING id")
+      .first<{ id: number }>()
+    await db.batch([
+      db.prepare("INSERT INTO branches (id, slug, name, status) VALUES (1, 'kl', 'KL', 'published')"),
+      db.prepare("INSERT INTO cuisines (id, slug, name, status) VALUES (1, 'arab', 'Arab', 'published')"),
+      db
+        .prepare("INSERT INTO packages (slug, branch_id, cuisine_id, name, price_sen, min_pax, inclusions, image_id, status) VALUES ('p1', 1, 1, 'With Photo', 3500, 50, '[]', ?, 'published'), ('p2', 1, 1, 'No Photo', 3500, 50, '[]', NULL, 'published')")
+        .bind(media!.id),
+    ])
+    const html = await (await app.request('/packages?branch=kl&cuisine=arab', {}, env)).text()
+    expect(html).toContain('src="/img/card/packages/x.webp"')
+    expect(html).toContain('alt="Lamb mandi on rice"')
+    expect(html).toContain('<span class="card__photo" aria-hidden="true"></span>')
+    await db.prepare('DELETE FROM media').run()
+  })
+})

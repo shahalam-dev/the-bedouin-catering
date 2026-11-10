@@ -1,4 +1,4 @@
-import { changed, type Status } from './shared'
+import { changed, type Status, type WithImage } from './shared'
 
 export type Occasion = {
   id: number
@@ -14,10 +14,14 @@ export type Occasion = {
 
 export type OccasionInput = Omit<Occasion, 'id' | 'created_at' | 'updated_at'>
 
-export async function listPublishedOccasions(db: D1Database): Promise<Occasion[]> {
+export async function listPublishedOccasions(db: D1Database): Promise<(Occasion & WithImage)[]> {
   const { results } = await db
-    .prepare("SELECT * FROM occasions WHERE status = 'published' ORDER BY sort_order, name")
-    .all<Occasion>()
+    .prepare(
+      `SELECT o.*, m.r2_key AS image_key, m.alt AS image_alt FROM occasions o
+       LEFT JOIN media m ON m.id = o.image_id
+       WHERE o.status = 'published' ORDER BY o.sort_order, o.name`,
+    )
+    .all<Occasion & WithImage>()
   return results
 }
 

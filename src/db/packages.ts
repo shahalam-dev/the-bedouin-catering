@@ -1,4 +1,4 @@
-import { changed, type Status } from './shared'
+import { changed, type Status, type WithImage } from './shared'
 
 export type Package = {
   id: number
@@ -19,7 +19,7 @@ export type Package = {
 }
 
 /** Package plus the branch and cuisine names shown as chips on the card. */
-export type PackageWithNames = Package & {
+export type PackageWithNames = Package & WithImage & {
   branch_name: string
   branch_slug: string
   cuisine_name: string
@@ -35,10 +35,12 @@ function fromRow<T extends Package>(r: Row<T>): T {
 }
 
 const SELECT_WITH_NAMES = `
-  SELECT p.*, b.name AS branch_name, b.slug AS branch_slug, c.name AS cuisine_name, c.slug AS cuisine_slug
+  SELECT p.*, b.name AS branch_name, b.slug AS branch_slug, c.name AS cuisine_name, c.slug AS cuisine_slug,
+    m.r2_key AS image_key, m.alt AS image_alt
   FROM packages p
   JOIN branches b ON b.id = p.branch_id
-  JOIN cuisines c ON c.id = p.cuisine_id`
+  JOIN cuisines c ON c.id = p.cuisine_id
+  LEFT JOIN media m ON m.id = p.image_id`
 
 /**
  * Public listing: published packages whose branch and cuisine are also published.

@@ -1,11 +1,12 @@
 import { Hono } from 'hono'
 import { listPublishedOccasions, type Occasion } from '../../db/occasions'
+import type { WithImage } from '../../db/shared'
 import { useI18n, withLang } from '../../lib/i18n'
 import { Button } from '../../views/components/Button'
 import { CategoryCard } from '../../views/components/CategoryCard'
 import { SectionTitle } from '../../views/components/SectionTitle'
 
-const OccasionsPage = ({ occasions }: { occasions: Occasion[] }) => {
+const OccasionsPage = ({ occasions }: { occasions: (Occasion & WithImage)[] }) => {
   const { lang, t } = useI18n()
   return (
     <>
@@ -18,7 +19,7 @@ const OccasionsPage = ({ occasions }: { occasions: Occasion[] }) => {
           ) : (
             <div class="card-grid">
               {occasions.map((o, i) => (
-                <CategoryCard label={o.name} tone={i % 2 ? 'ink' : 'crimson'}>
+                <CategoryCard label={o.name} image={o} tone={i % 2 ? 'ink' : 'crimson'}>
                   {o.description && <p>{o.description}</p>}
                 </CategoryCard>
               ))}

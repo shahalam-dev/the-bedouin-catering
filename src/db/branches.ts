@@ -1,4 +1,4 @@
-import { changed, type Status } from './shared'
+import { changed, type Status, type WithImage } from './shared'
 
 export type Branch = {
   id: number
@@ -15,10 +15,14 @@ export type Branch = {
 
 export type BranchInput = Omit<Branch, 'id' | 'created_at' | 'updated_at'>
 
-export async function listPublishedBranches(db: D1Database): Promise<Branch[]> {
+export async function listPublishedBranches(db: D1Database): Promise<(Branch & WithImage)[]> {
   const { results } = await db
-    .prepare("SELECT * FROM branches WHERE status = 'published' ORDER BY sort_order, name")
-    .all<Branch>()
+    .prepare(
+      `SELECT b.*, m.r2_key AS image_key, m.alt AS image_alt FROM branches b
+       LEFT JOIN media m ON m.id = b.image_id
+       WHERE b.status = 'published' ORDER BY b.sort_order, b.name`,
+    )
+    .all<Branch & WithImage>()
   return results
 }
 
