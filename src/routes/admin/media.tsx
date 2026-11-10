@@ -2,6 +2,7 @@ import { zValidator } from '@hono/zod-validator'
 import { Hono, type Context } from 'hono'
 import { createMedia, listMedia, type Media, type MediaFolder } from '../../db/media'
 import type { AdminEnv } from '../../lib/auth'
+import { imagesErrorCode, imgUrl, isBadImageError, toWebp } from '../../lib/images'
 import { adminT } from '../../lib/i18n'
 import { IMAGE_TYPES, mediaUploadSchema } from '../../lib/validation'
 import { Button } from '../../views/components/Button'
@@ -11,9 +12,9 @@ const t = adminT.media
 const FOLDERS = Object.keys(t.folders) as MediaFolder[]
 type UploadField = keyof typeof t.errors
 
-type Props = { items: Media[]; uploaded?: boolean; values?: { folder?: string; alt?: string }; errors?: UploadField[] }
+type Props = { items: Media[]; uploaded?: boolean; values?: { folder?: string; alt?: string }; errors?: UploadField[]; failure?: string }
 
-const MediaPage = ({ items, uploaded, values = {}, errors = [] }: Props) => {
+const MediaPage = ({ items, uploaded, values = {}, errors = [], failure }: Props) => {
   const err = (k: UploadField) => (errors.includes(k) ? t.errors[k] : undefined)
   return (
     <>
@@ -28,14 +29,14 @@ const MediaPage = ({ items, uploaded, values = {}, errors = [] }: Props) => {
       )}
       <form method="post" enctype="multipart/form-data" class="panel form" novalidate>
         <h2>{t.upload}</h2>
-        {errors.length > 0 && (
+        {(errors.length > 0 || failure) && (
           <p class="notice notice--error" role="alert">
-            {adminT.formError}
+            {failure ?? adminT.formError}
           </p>
         )}
         <div class="form__grid">
           <FormField id="file" label={t.file} error={err('file')}>
-            <input id="file" name="file" type="file" class="input" required accept={Object.keys(IMAGE_TYPES).join(',')} {...fieldAria('file', err('file'))} />
+            <input id="file" name="file" type="file" class="input" required accept={[...IMAGE_TYPES, '.heic', '.heif'].join(',')} {...fieldAria('file', err('file'))} />
           </FormField>
           <FormField id="folder" label={t.folder} error={err('folder')}>
             <select id="folder" name="folder" class="input" {...fieldAria('folder', err('folder'))}>
@@ -63,7 +64,7 @@ const MediaPage = ({ items, uploaded, values = {}, errors = [] }: Props) => {
             {items.map((m) => (
               <li>
                 <figure>
-                  <img src={`/media/${m.r2_key}`} alt={m.alt} loading="lazy" />
+                  <img src={imgUrl(m.r2_key, 'thumb')} alt={m.alt} loading="lazy" decoding="async" />
                   <figcaption>
                     {m.alt}
                     <div class="caption">{t.folders[m.folder]}</div>
@@ -100,11 +101,21 @@ media.post(
   }),
   async (c) => {
     const { folder, alt, file } = c.req.valid('form')
-    // A new random key per upload, so /media can cache it forever.
-    const key = `${folder}/${crypto.randomUUID()}.${IMAGE_TYPES[file.type as keyof typeof IMAGE_TYPES]}`
-    await c.env.MEDIA.put(key, file, { httpMetadata: { contentType: file.type } })
+    // Only the re-encoded WebP is stored, never the original (this also drops EXIF/GPS).
+    let webp: ArrayBuffer
     try {
-      await createMedia(c.env.DB, { r2_key: key, folder, alt, content_type: file.type, size_bytes: file.size, width: null, height: null })
+      webp = await toWebp(c.env.IMAGES, file)
+    } catch (e) {
+      const bad = isBadImageError(e)
+      console.error('upload: image conversion failed', { code: imagesErrorCode(e), error: String(e) })
+      c.status(bad ? 422 : 503)
+      return c.render(<MediaPage items={await listMedia(c.env.DB)} values={{ folder, alt }} failure={bad ? t.unreadable : t.unavailable} />)
+    }
+    // A new random key per upload, so /media and /img can cache it forever.
+    const key = `${folder}/${crypto.randomUUID()}.webp`
+    await c.env.MEDIA.put(key, webp, { httpMetadata: { contentType: 'image/webp' } })
+    try {
+      await createMedia(c.env.DB, { r2_key: key, folder, alt, content_type: 'image/webp', size_bytes: webp.byteLength, width: null, height: null })
     } catch (e) {
       // Do not leave an object no row points to.
       await c.env.MEDIA.delete(key)

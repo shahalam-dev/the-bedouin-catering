@@ -3,6 +3,7 @@ import admin from './routes/admin'
 import enquiries from './routes/api/enquiries'
 import contact from './routes/public/contact'
 import home from './routes/public/home'
+import img from './routes/public/img'
 import media from './routes/public/media'
 import menu from './routes/public/menu'
 import { NotFoundPage } from './routes/public/not-found'
@@ -21,6 +22,7 @@ app.route('/occasions', occasions)
 app.route('/contact', contact)
 app.route('/api/enquiries', enquiries)
 app.route('/media', media)
+app.route('/img', img)
 app.route('/admin', admin)
 
 app.notFound((c) => {
