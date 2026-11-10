@@ -10,6 +10,8 @@ import { getPackageById, listPackages } from '../src/db/packages'
 import { rmToSen } from '../src/lib/validation'
 
 const db = env.DB
+const PNG_B64 =
+  'iVBORw0KGgoAAAANSUhEUgAAACgAAAAeCAIAAADRv8uKAAAALElEQVR4nO3NMQ0AAAgDsCnhxr8KZCEDjib9m6k+EbFYLBaLxWKxWCwW/40XH5zx3XTu5yYAAAAASUVORK5CYII='
 const ORIGIN = 'http://localhost'
 // Local dev bypass on (tests run against http://localhost).
 const devEnv = { ...env, ADMIN_DEV_EMAIL: 'staff@example.com' } as Env
@@ -211,34 +213,58 @@ describe('enquiries', () => {
 })
 
 describe('image upload', () => {
-  const upload = (fields: Record<string, string>, file: File) => {
+  const upload = (fields: Record<string, string>, file: File, e: Env = devEnv) => {
     const fd = new FormData()
     for (const [k, v] of Object.entries(fields)) fd.set(k, v)
     fd.set('file', file)
-    return post('/admin/media', fd)
+    return app.request('/admin/media', { method: 'POST', body: fd, headers: { Origin: ORIGIN } }, e)
   }
-  const jpeg = new File([new Uint8Array([0xff, 0xd8, 0xff])], 'mandi.jpg', { type: 'image/jpeg' })
+  // A real 40x30 PNG, so the local Images binding can decode it.
+  const png = new File([Uint8Array.from(atob(PNG_B64), (ch) => ch.charCodeAt(0))], 'mandi.png', { type: 'image/png' })
+  const throwingImages = (code: number) =>
+    ({ input: () => { throw Object.assign(new Error(`IMAGES_TRANSFORM_ERROR ${code}`), { code }) } }) as unknown as ImagesBinding
 
-  it('stores the file in R2 and the row with its alt text', async () => {
-    const res = await upload({ folder: 'menu', alt: 'Lamb mandi on a platter' }, jpeg)
+  it('stores only a WebP copy in R2 and the row with its alt text', async () => {
+    const res = await upload({ folder: 'menu', alt: 'Lamb mandi on a platter' }, png)
     expect(res.status).toBe(303)
     const [m] = await listMedia(db)
-    expect(m).toMatchObject({ folder: 'menu', alt: 'Lamb mandi on a platter', content_type: 'image/jpeg', size_bytes: 3 })
-    expect(m.r2_key).toMatch(/^menu\/[0-9a-f-]{36}\.jpg$/)
+    expect(m).toMatchObject({ folder: 'menu', alt: 'Lamb mandi on a platter', content_type: 'image/webp' })
+    expect(m.r2_key).toMatch(/^menu\/[0-9a-f-]{36}\.webp$/)
     const obj = await env.MEDIA.get(m.r2_key)
-    expect(obj?.httpMetadata?.contentType).toBe('image/jpeg')
+    expect(obj?.httpMetadata?.contentType).toBe('image/webp')
+    const bytes = new Uint8Array(await obj!.arrayBuffer())
+    expect(m.size_bytes).toBe(bytes.length)
+    expect(new TextDecoder().decode(bytes.slice(8, 12))).toBe('WEBP')
 
     // The image shows up in the package form's image picker.
     expect(await (await get('/admin/packages/new')).text()).toContain('Lamb mandi on a platter (Menu)')
   })
 
   it('requires alt text and an allowed image type', async () => {
-    const noAlt = await upload({ folder: 'menu', alt: '  ' }, jpeg)
+    const noAlt = await upload({ folder: 'menu', alt: '  ' }, png)
     expect(noAlt.status).toBe(400)
     expect(await noAlt.text()).toContain('Please describe the image')
 
     const svg = await upload({ folder: 'menu', alt: 'Logo' }, new File(['<svg/>'], 'x.svg', { type: 'image/svg+xml' }))
     expect(svg.status).toBe(400)
+    const avif = await upload({ folder: 'menu', alt: 'Dish' }, new File(['x'], 'x.avif', { type: 'image/avif' }))
+    expect(avif.status).toBe(400)
+    const big = await upload({ folder: 'menu', alt: 'Dish' }, new File([new Uint8Array(15 * 1024 * 1024 + 1)], 'x.png', { type: 'image/png' }))
+    expect(big.status).toBe(400)
     expect(await listMedia(db)).toHaveLength(0)
+  })
+
+  it('stores nothing and explains when the Images binding fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const limit = await upload({ folder: 'menu', alt: 'Dish photo' }, png, { ...devEnv, IMAGES: throwingImages(9422) })
+    expect(limit.status).toBe(503)
+    expect(await limit.text()).toContain('Image processing is temporarily unavailable')
+
+    const bad = await upload({ folder: 'menu', alt: 'Dish photo' }, png, { ...devEnv, IMAGES: throwingImages(9412) })
+    expect(bad.status).toBe(422)
+    expect(await bad.text()).toContain('could not be read as an image')
+
+    expect(await listMedia(db)).toHaveLength(0)
+    expect((await env.MEDIA.list({ prefix: 'menu/' })).objects.filter((o) => o.key.endsWith('.png'))).toHaveLength(0)
   })
 })

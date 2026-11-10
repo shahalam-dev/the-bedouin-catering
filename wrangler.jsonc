@@ -25,6 +25,8 @@
       "bucket_name": "catering-media"
     }
   ],
+  // Cloudflare Images: converts uploads to WebP and serves resized AVIF/WebP via /img.
+  "images": { "binding": "IMAGES" },
   // Cloudflare Email Sending. The sender domain must be onboarded in Email Service first.
   "send_email": [{ "name": "EMAIL" }],
   "routes": [{ "pattern": "bedouin.ssalam.co.uk", "custom_domain": true }],

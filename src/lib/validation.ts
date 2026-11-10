@@ -89,14 +89,17 @@ export const enquiryStatusSchema = z.object({
   filter: optional(z.enum(['new', 'contacted', 'closed'])),
 })
 
-export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024
-// No SVG: it can carry scripts.
-export const IMAGE_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/avif': 'avif' } as const
+export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024
+// Uploads are re-encoded to WebP. No SVG (it can carry scripts); no AVIF (Cloudflare Images
+// only reads AVIF on Enterprise plans).
+export const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'] as const
+// Some browsers (e.g. Chrome on Windows) send HEIC files with an empty type.
+const uploadType = (f: File) => f.type || (/\.hei[cf]$/i.test(f.name) ? 'image/heic' : '')
 
 export const mediaUploadSchema = z.object({
   folder: z.enum(['packages', 'menu', 'gallery']),
   alt: z.string().trim().min(3).max(300),
   file: z
     .instanceof(File)
-    .refine((f) => f.type in IMAGE_TYPES && f.size > 0 && f.size <= MAX_UPLOAD_BYTES),
+    .refine((f) => (IMAGE_TYPES as readonly string[]).includes(uploadType(f)) && f.size > 0 && f.size <= MAX_UPLOAD_BYTES),
 })
