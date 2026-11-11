@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { listPublishedOccasions, type Occasion } from '../../db/occasions'
+import { inLang } from '../../db/shared'
 import { listPublishedPackages, type PackageWithNames } from '../../db/packages'
 import { listPublishedTestimonials, type Testimonial } from '../../db/testimonials'
 import { HERO_VIDEO } from '../../lib/hero'
@@ -12,8 +13,8 @@ import { PackageCard } from '../../views/components/PackageCard'
 import { SectionTitle } from '../../views/components/SectionTitle'
 
 const OccasionStrip = ({ occasions }: { occasions: Occasion[] }) => {
-  const { t } = useI18n()
-  const items = occasions.map((o) => <li>{o.name}</li>)
+  const { lang, t } = useI18n()
+  const items = occasions.map((o) => <li>{inLang(o, lang).name}</li>)
   return (
     <section class="occasion-strip" aria-label={t.nav.occasions}>
       <div class="occasion-strip__track">

@@ -51,7 +51,6 @@ const lines = z
 
 const common = { name, sort_order: sortOrder, status, image_id: optional(id) }
 
-export const occasionSchema = z.object({ ...common, slug, description: text(1000) })
 
 export const packageSchema = z.object({
   ...common,
@@ -93,7 +92,7 @@ const imageFile = z
 const alt = z.string().trim().min(3).max(300)
 
 export const mediaUploadSchema = z.object({
-  folder: z.enum(['packages', 'menu', 'gallery', 'cuisines', 'branches']),
+  folder: z.enum(['packages', 'menu', 'gallery', 'cuisines', 'branches', 'occasions']),
   alt,
   file: imageFile,
 })
@@ -113,4 +112,8 @@ export const cuisineSchema = z
 
 export const branchSchema = z
   .object({ ...common, ...imageUpload, slug, name_bm: text(120), address: text(300), phone: text(30) })
+  .refine(altNeeded, { path: ['image_alt'] })
+
+export const occasionSchema = z
+  .object({ ...common, ...imageUpload, slug, name_bm: text(120), description: text(1000), description_bm: text(1000) })
   .refine(altNeeded, { path: ['image_alt'] })

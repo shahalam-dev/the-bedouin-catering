@@ -1,8 +1,8 @@
 import { Hono } from 'hono'
-import { inLang, listPublishedCuisines, type Cuisine } from '../../db/cuisines'
+import { listPublishedCuisines, type Cuisine } from '../../db/cuisines'
 import { listPublishedMenuItems, type MenuItem } from '../../db/menu_items'
 import { useI18n, withLang } from '../../lib/i18n'
-import type { WithImage } from '../../db/shared'
+import { inLang, type WithImage } from '../../db/shared'
 import { MenuCard } from '../../views/components/MenuCard'
 import { SectionTitle } from '../../views/components/SectionTitle'
 

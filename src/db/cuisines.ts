@@ -1,4 +1,3 @@
-import type { Lang } from '../lib/i18n'
 import { changed, type Status, type WithImage } from './shared'
 
 export type Cuisine = {
@@ -16,10 +15,6 @@ export type Cuisine = {
 }
 
 export type CuisineInput = Omit<Cuisine, 'id' | 'created_at' | 'updated_at'>
-
-/** Name and description in the visitor's language; BM falls back to English when not filled in. */
-export const inLang = <T extends Cuisine>(c: T, lang: Lang): T =>
-  lang === 'bm' ? { ...c, name: c.name_bm || c.name, description: c.description_bm || c.description } : c
 
 export async function listPublishedCuisines(db: D1Database): Promise<(Cuisine & WithImage)[]> {
   const { results } = await db

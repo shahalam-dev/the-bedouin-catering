@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { listPublishedOccasions, type Occasion } from '../../db/occasions'
-import type { WithImage } from '../../db/shared'
+import { inLang, type WithImage } from '../../db/shared'
 import { useI18n, withLang } from '../../lib/i18n'
 import { Button } from '../../views/components/Button'
 import { CategoryCard } from '../../views/components/CategoryCard'
@@ -18,7 +18,7 @@ const OccasionsPage = ({ occasions }: { occasions: (Occasion & WithImage)[] }) =
             <p class="empty">{t.occasions.none}</p>
           ) : (
             <div class="card-grid">
-              {occasions.map((o, i) => (
+              {occasions.map((x) => inLang(x, lang)).map((o, i) => (
                 <CategoryCard label={o.name} image={o} tone={i % 2 ? 'ink' : 'crimson'}>
                   {o.description && <p>{o.description}</p>}
                 </CategoryCard>

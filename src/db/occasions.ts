@@ -4,7 +4,9 @@ export type Occasion = {
   id: number
   slug: string
   name: string
+  name_bm: string | null
   description: string | null
+  description_bm: string | null
   image_id: number | null
   sort_order: number
   status: Status
@@ -44,10 +46,10 @@ export function getPublishedOccasionBySlug(db: D1Database, slug: string): Promis
 export async function createOccasion(db: D1Database, o: OccasionInput): Promise<number> {
   const row = await db
     .prepare(
-      `INSERT INTO occasions (slug, name, description, image_id, sort_order, status)
-       VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
+      `INSERT INTO occasions (slug, name, name_bm, description, description_bm, image_id, sort_order, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
     )
-    .bind(o.slug, o.name, o.description, o.image_id, o.sort_order, o.status)
+    .bind(o.slug, o.name, o.name_bm, o.description, o.description_bm, o.image_id, o.sort_order, o.status)
     .first<{ id: number }>()
   return row!.id
 }
@@ -55,11 +57,11 @@ export async function createOccasion(db: D1Database, o: OccasionInput): Promise<
 export async function updateOccasion(db: D1Database, id: number, o: OccasionInput): Promise<boolean> {
   const r = await db
     .prepare(
-      `UPDATE occasions SET slug = ?, name = ?, description = ?, image_id = ?, sort_order = ?, status = ?,
+      `UPDATE occasions SET slug = ?, name = ?, name_bm = ?, description = ?, description_bm = ?, image_id = ?, sort_order = ?, status = ?,
          updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
        WHERE id = ?`,
     )
-    .bind(o.slug, o.name, o.description, o.image_id, o.sort_order, o.status, id)
+    .bind(o.slug, o.name, o.name_bm, o.description, o.description_bm, o.image_id, o.sort_order, o.status, id)
     .run()
   return changed(r)
 }
