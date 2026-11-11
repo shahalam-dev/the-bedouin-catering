@@ -3,6 +3,9 @@
   "name": "the-bedouin-catering",
   "main": "src/index.tsx",
   "compatibility_date": "2026-11-07",
+  // Static assets (public/) are served directly, except /video/*: Workers assets never answer Range
+  // requests with 206, and Safari needs 206 to play video. src/routes/public/video.ts slices them.
+  "assets": { "binding": "ASSETS", "run_worker_first": ["/video/*"] },
   "d1_databases": [
     {
       "binding": "DB",
