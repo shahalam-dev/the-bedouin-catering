@@ -18,14 +18,21 @@ export type Testimonial = {
 
 export type TestimonialInput = Omit<Testimonial, 'id' | 'created_at' | 'updated_at'>
 
-export async function listPublishedTestimonials(db: D1Database): Promise<(Testimonial & WithImage)[]> {
+/** Totals over all published testimonials (window functions run before LIMIT). */
+export type TestimonialStats = { avg_rating: number; total: number }
+
+/** `limit` random published testimonials; `firstId`, if published, is always included and comes first. */
+export async function listRandomTestimonials(db: D1Database, limit: number, firstId = 0): Promise<(Testimonial & WithImage & TestimonialStats)[]> {
   const { results } = await db
     .prepare(
-      `SELECT t.*, m.r2_key AS image_key, m.alt AS image_alt FROM testimonials t
+      `SELECT t.*, m.r2_key AS image_key, m.alt AS image_alt,
+         AVG(t.rating) OVER () AS avg_rating, COUNT(*) OVER () AS total
+       FROM testimonials t
        LEFT JOIN media m ON m.id = t.image_id
-       WHERE t.status = 'published' ORDER BY t.sort_order, t.id DESC`,
+       WHERE t.status = 'published' ORDER BY t.id = ? DESC, RANDOM() LIMIT ?`,
     )
-    .all<Testimonial & WithImage>()
+    .bind(firstId, limit)
+    .all<Testimonial & WithImage & TestimonialStats>()
   return results
 }
 

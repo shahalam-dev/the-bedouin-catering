@@ -4,7 +4,7 @@ import { listPublishedGallery, type GalleryItem } from '../../db/gallery'
 import { listPublishedOccasions, type Occasion } from '../../db/occasions'
 import { listPublishedPackages, type PackageWithNames } from '../../db/packages'
 import { inLang, type WithImage } from '../../db/shared'
-import { listPublishedTestimonials, type Testimonial } from '../../db/testimonials'
+import { listRandomTestimonials, type Testimonial, type TestimonialStats } from '../../db/testimonials'
 import { HERO_VIDEO } from '../../lib/hero'
 import { imgUrl } from '../../lib/images'
 import { useI18n, withLang } from '../../lib/i18n'
@@ -61,13 +61,15 @@ const Who = ({ item }: { item: Testimonial }) => {
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
-// Works without JS: list and arrows are links to ?t=N. public/js/testimonials.js turns them into
+// Works without JS: list and arrows are links to ?t=<id>, which the server shows first.
+// Index 0 is always the active one: the server puts the requested testimonial first. public/js/testimonials.js turns them into
 // in-page switches and auto-advances.
-const Testimonials = ({ items, active }: { items: (Testimonial & WithImage)[]; active: number }) => {
+const Testimonials = ({ items }: { items: (Testimonial & WithImage & TestimonialStats)[] }) => {
+  const active = 0
   const { lang, t } = useI18n()
   const n = items.length
-  const avg = Number((items.reduce((s, i) => s + i.rating, 0) / n).toFixed(1))
-  const href = (i: number) => `${withLang(`/?t=${(i + n) % n}`, lang)}#testimonials`
+  const avg = Number(items[0].avg_rating.toFixed(1))
+  const href = (i: number) => `${withLang(`/?t=${items[(i + n) % n].id}`, lang)}#testimonials`
   const [before, accent, after] = t.home.testimonialsTitle
   return (
     <section class="section testimonials" id="testimonials" data-testimonials>
@@ -88,7 +90,7 @@ const Testimonials = ({ items, active }: { items: (Testimonial & WithImage)[]; a
                   <StarIcon />
                 ))}
               </span>
-              <span class="caption">{t.home.reviewCount(n)}</span>
+              <span class="caption">{t.home.reviewCount(items[0].total)}</span>
             </span>
           </div>
           <ul class="testimonials__list">
@@ -177,10 +179,11 @@ const TeamSection = () => {
 // The rest are on /clients and /gallery.
 const HOME_CLIENTS = 8
 const HOME_GALLERY = 10
+const HOME_TESTIMONIALS = 10
 
-type Props = { clients: (Client & WithImage)[]; gallery: (GalleryItem & WithImage)[]; event?: string; occasions: Occasion[]; packages: PackageWithNames[]; testimonials: (Testimonial & WithImage)[]; activeTestimonial: number }
+type Props = { clients: (Client & WithImage)[]; gallery: (GalleryItem & WithImage)[]; event?: string; occasions: Occasion[]; packages: PackageWithNames[]; testimonials: (Testimonial & WithImage & TestimonialStats)[] }
 
-const HomePage = ({ activeTestimonial, clients, gallery, event, occasions, packages, testimonials }: Props) => {
+const HomePage = ({ clients, gallery, event, occasions, packages, testimonials }: Props) => {
   const { lang, t } = useI18n()
   return (
     <>
@@ -257,7 +260,7 @@ const HomePage = ({ activeTestimonial, clients, gallery, event, occasions, packa
         </div>
       </section>
 
-      {testimonials.length > 0 && <Testimonials items={testimonials} active={activeTestimonial} />}
+      {testimonials.length > 0 && <Testimonials items={testimonials} />}
 
       <TeamSection />
     </>
@@ -273,12 +276,10 @@ home.get('/', async (c) => {
     listPublishedGallery(db),
     listPublishedOccasions(db),
     listPublishedPackages(db), // already sorted popular first
-    listPublishedTestimonials(db),
+    listRandomTestimonials(db, HOME_TESTIMONIALS, Number(c.req.query('t')) || 0),
   ])
-  const t = Number(c.req.query('t'))
-  const activeTestimonial = Number.isInteger(t) && t >= 0 && t < testimonials.length ? t : 0
   return c.render(
-    <HomePage activeTestimonial={activeTestimonial} clients={clients} gallery={gallery} event={c.req.query('event')} occasions={occasions} packages={packages.slice(0, 3)} testimonials={testimonials} />,
+    <HomePage clients={clients} gallery={gallery} event={c.req.query('event')} occasions={occasions} packages={packages.slice(0, 3)} testimonials={testimonials} />,
   )
 })
 
