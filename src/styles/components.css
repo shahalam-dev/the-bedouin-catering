@@ -773,32 +773,33 @@ textarea.input {
 /* Client logos (home + /clients) */
 .client-logos {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  /* minmax(0, …): a plain 1fr lets a wide logo's intrinsic size stretch the column (iOS Safari overflow). */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-5);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 .client-logos li {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  min-width: 0;
   padding: var(--space-4);
-  aspect-ratio: 3 / 2;
   background: var(--white);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
 }
+/* Ratio on the img, not the li: Safari won't resolve max-height:100% against an aspect-ratio box. */
 .client-logos img {
-  max-width: 100%;
-  max-height: 100%;
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 2;
   object-fit: contain;
 }
 @media (min-width: 640px) {
-  .client-logos { grid-template-columns: repeat(3, 1fr); }
+  .client-logos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (min-width: 1024px) {
-  .client-logos { grid-template-columns: repeat(4, 1fr); }
+  .client-logos { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 /* Home: testimonials — list on the left, crimson quote panel on the right. */
