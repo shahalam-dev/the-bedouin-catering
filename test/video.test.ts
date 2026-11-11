@@ -1,10 +1,11 @@
 import { env } from 'cloudflare:workers'
 import { describe, expect, it } from 'vitest'
 import app from '../src/index'
+import { HERO_VIDEO } from '../src/lib/hero'
 
 const SIZE = 5000
 const FILE = Uint8Array.from({ length: SIZE }, (_, i) => i % 256)
-const PATH = '/video/hero2-loop.v1.mp4'
+const PATH: string = HERO_VIDEO.desktop
 
 // Fake ASSETS binding: serves FILE at PATH, 404 elsewhere, and records whether Range reached it.
 let sawRange = false
