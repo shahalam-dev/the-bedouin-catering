@@ -64,14 +64,6 @@ export const packageSchema = z.object({
   is_popular: checkbox,
 })
 
-export const menuItemSchema = z.object({
-  ...common,
-  cuisine_id: optional(id),
-  description: text(1000),
-  category: text(60),
-  price_sen: optional(price),
-  is_bestseller: checkbox,
-})
 
 export const enquiryStatusSchema = z.object({
   status: z.enum(['new', 'contacted', 'closed']),
@@ -116,4 +108,18 @@ export const branchSchema = z
 
 export const occasionSchema = z
   .object({ ...common, ...imageUpload, slug, name_bm: text(120), description: text(1000), description_bm: text(1000) })
+  .refine(altNeeded, { path: ['image_alt'] })
+
+export const menuItemSchema = z
+  .object({
+    ...common,
+    ...imageUpload,
+    name_bm: text(120),
+    cuisine_id: optional(id),
+    description: text(1000),
+    description_bm: text(1000),
+    category: text(60),
+    price_sen: optional(price),
+    is_bestseller: checkbox,
+  })
   .refine(altNeeded, { path: ['image_alt'] })

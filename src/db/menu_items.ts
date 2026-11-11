@@ -4,7 +4,9 @@ export type MenuItem = {
   id: number
   cuisine_id: number | null
   name: string
+  name_bm: string | null
   description: string | null
+  description_bm: string | null
   category: string | null
   price_sen: number | null
   is_bestseller: boolean
@@ -53,11 +55,11 @@ export async function createMenuItem(db: D1Database, m: MenuItemInput): Promise<
   const row = await db
     .prepare(
       `INSERT INTO menu_items
-         (cuisine_id, name, description, category, price_sen, is_bestseller, image_id, sort_order, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+         (cuisine_id, name, name_bm, description, description_bm, category, price_sen, is_bestseller, image_id, sort_order, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
     )
     .bind(
-      m.cuisine_id, m.name, m.description, m.category, m.price_sen,
+      m.cuisine_id, m.name, m.name_bm, m.description, m.description_bm, m.category, m.price_sen,
       m.is_bestseller ? 1 : 0, m.image_id, m.sort_order, m.status,
     )
     .first<{ id: number }>()
@@ -68,12 +70,12 @@ export async function updateMenuItem(db: D1Database, id: number, m: MenuItemInpu
   const r = await db
     .prepare(
       `UPDATE menu_items SET
-         cuisine_id = ?, name = ?, description = ?, category = ?, price_sen = ?, is_bestseller = ?,
+         cuisine_id = ?, name = ?, name_bm = ?, description = ?, description_bm = ?, category = ?, price_sen = ?, is_bestseller = ?,
          image_id = ?, sort_order = ?, status = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
        WHERE id = ?`,
     )
     .bind(
-      m.cuisine_id, m.name, m.description, m.category, m.price_sen,
+      m.cuisine_id, m.name, m.name_bm, m.description, m.description_bm, m.category, m.price_sen,
       m.is_bestseller ? 1 : 0, m.image_id, m.sort_order, m.status, id,
     )
     .run()
