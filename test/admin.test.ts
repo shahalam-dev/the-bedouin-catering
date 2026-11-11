@@ -296,6 +296,30 @@ describe('occasion editor', () => {
   })
 })
 
+describe('menu item editor', () => {
+  it('saves BM copy, uploads into the menu folder, offers only menu images, shows BM publicly', async () => {
+    await createMedia(db, { r2_key: 'gallery/x.webp', folder: 'gallery', alt: 'Gallery only', content_type: 'image/webp', size_bytes: 1, width: null, height: null })
+    const fd = new FormData()
+    const png = new File([Uint8Array.from(atob(PNG_B64), (ch) => ch.charCodeAt(0))], 'h.png', { type: 'image/png' })
+    const fields = { name: 'Hummus', name_bm: 'Humus', cuisine_id: '', category: '', price_sen: '', description: 'Chickpea dip', description_bm: 'Celup kacang kuda', sort_order: '0', status: 'published', image_id: '', image_alt: 'Bowl of hummus', image_file: png }
+    for (const [k, v] of Object.entries(fields)) fd.set(k, v)
+    expect((await post('/admin/menu/new', fd)).status).toBe(303)
+
+    const [m] = (await listMedia(db)).filter((x) => x.folder === 'menu')
+    expect(m.r2_key).toMatch(/^menu\//)
+    const row = await db.prepare('SELECT * FROM menu_items').first()
+    expect(row).toMatchObject({ name_bm: 'Humus', description_bm: 'Celup kacang kuda', image_id: m.id })
+
+    const html = await (await get(`/admin/menu/${row!.id}`)).text()
+    expect(html).toContain('Bowl of hummus')
+    expect(html).not.toContain('Gallery only')
+
+    const bm = await (await app.request('/menu?lang=bm', {}, env)).text()
+    expect(bm).toContain('Celup kacang kuda')
+    expect(await (await app.request('/menu', {}, env)).text()).not.toContain('Celup kacang kuda')
+  })
+})
+
 describe('enquiries', () => {
   it('lists enquiries by status and updates a status', async () => {
     const id = await createEnquiry(db, { name: 'Aisha', phone: '+60 12-345 6789', email: null, event_date: null, pax: 80, branch_id: branchId, cuisine_id: null, package_id: null, message: 'Hi' })
