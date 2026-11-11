@@ -301,6 +301,7 @@ export const adminT = {
     received: 'Received',
     contact: 'Contact',
     event: 'Event',
+    eventDate: 'Event date',
     details: 'Interest',
     message: 'Message',
     pax: (n: number) => `${n} pax`,

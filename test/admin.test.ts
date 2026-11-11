@@ -354,6 +354,7 @@ describe('enquiries', () => {
     expect(html).toContain('Aisha')
     expect(html).toContain('href="tel:+60123456789"')
     expect(html).toContain(`href="/admin/enquiries/${id}"`)
+    expect(html).toContain('Event date')
     expect(html).not.toContain('Shah Alam')
     expect(html).not.toContain('<select')
 

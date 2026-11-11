@@ -56,6 +56,7 @@ const EnquiriesPage = ({ rows, status, page, hasMore }: Props) => (
               <th scope="col">{t.received}</th>
               <th scope="col">{adminT.name}</th>
               <th scope="col">{t.contact}</th>
+              <th scope="col">{t.eventDate}</th>
               <th scope="col">{adminT.status}</th>
             </tr>
           </thead>
@@ -71,6 +72,7 @@ const EnquiriesPage = ({ rows, status, page, hasMore }: Props) => (
                 <td class="nowrap">
                   <a href={tel(e.phone)}>{e.phone}</a>
                 </td>
+                <td class="nowrap">{e.event_date ?? '—'}</td>
                 <td>
                   <StatusPill status={e.status} />
                 </td>
