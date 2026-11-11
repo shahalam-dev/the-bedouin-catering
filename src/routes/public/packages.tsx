@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { listPublishedBranches, type Branch } from '../../db/branches'
-import { listCuisinesForBranch, type Cuisine } from '../../db/cuisines'
+import { inLang, listCuisinesForBranch, type Cuisine } from '../../db/cuisines'
 import { listPublishedPackages, type PackageWithNames } from '../../db/packages'
 import type { WithImage } from '../../db/shared'
 import { useI18n, withLang } from '../../lib/i18n'
@@ -51,8 +51,10 @@ type Props = {
   packages: PackageWithNames[]
 }
 
-const PackagesPage = ({ branches, branch, cuisines, cuisine, packages }: Props) => {
+const PackagesPage = ({ branches, branch, cuisines: rawCuisines, cuisine: rawCuisine, packages }: Props) => {
   const { lang, t } = useI18n()
+  const cuisines = rawCuisines.map((x) => inLang(x, lang))
+  const cuisine = rawCuisine && inLang(rawCuisine, lang)
   const step = !branch ? 0 : !cuisine ? 1 : 2
   const branchHref = (slug: string) => withLang(`/packages?branch=${encodeURIComponent(slug)}`, lang)
 

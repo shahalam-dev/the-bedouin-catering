@@ -3,9 +3,9 @@ import { sign } from 'hono/jwt'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import app from '../src/index'
 import { createBranch } from '../src/db/branches'
-import { createCuisine } from '../src/db/cuisines'
+import { createCuisine, getCuisineById } from '../src/db/cuisines'
 import { createEnquiry, getEnquiryById } from '../src/db/enquiries'
-import { listMedia } from '../src/db/media'
+import { createMedia, listMedia } from '../src/db/media'
 import { getPackageById, listPackages } from '../src/db/packages'
 import { rmToSen } from '../src/lib/validation'
 
@@ -33,7 +33,7 @@ beforeEach(async () => {
     db.prepare('DELETE FROM media'),
   ])
   branchId = await createBranch(db, { slug: 'shah-alam', name: 'Shah Alam', address: null, phone: null, image_id: null, sort_order: 0, status: 'published' })
-  cuisineId = await createCuisine(db, { slug: 'arab', name: 'Arab', description: null, image_id: null, sort_order: 0, status: 'published' })
+  cuisineId = await createCuisine(db, { slug: 'arab', name: 'Arab', name_bm: null, description: null, description_bm: null, image_id: null, sort_order: 0, status: 'published' })
 })
 
 afterEach(() => {
@@ -186,6 +186,64 @@ describe('content editor', () => {
     expect(res.status).toBe(303)
     const row = await db.prepare('SELECT * FROM menu_items').first()
     expect(row).toMatchObject({ name: 'Hummus', cuisine_id: null, price_sen: null, is_bestseller: 0, status: 'draft' })
+  })
+})
+
+describe('cuisine editor', () => {
+  const png = () => new File([Uint8Array.from(atob(PNG_B64), (ch) => ch.charCodeAt(0))], 'mandi.png', { type: 'image/png' })
+  const form = (over: Record<string, string | File> = {}) => {
+    const fd = new FormData()
+    const fields = { name: 'Arab', name_bm: 'Arab (BM)', slug: 'arab', description: 'Rice', description_bm: 'Nasi', sort_order: '0', status: 'published', image_id: '', image_alt: '', image_file: new File([], ''), ...over }
+    for (const [k, v] of Object.entries(fields)) fd.set(k, v)
+    return fd
+  }
+
+  it('saves BM copy, uploads the image into the cuisines folder and links it', async () => {
+    const res = await post(`/admin/cuisines/${cuisineId}`, form({ image_file: png(), image_alt: 'Lamb mandi platter' }))
+    expect(res.status).toBe(303)
+    const [m] = await listMedia(db)
+    expect(m).toMatchObject({ folder: 'cuisines', alt: 'Lamb mandi platter' })
+    expect(m.r2_key).toMatch(/^cuisines\/[0-9a-f-]{36}\.webp$/)
+    expect(await getCuisineById(db, cuisineId)).toMatchObject({ name_bm: 'Arab (BM)', description_bm: 'Nasi', image_id: m.id })
+
+    // The form shows the upload box and the library picker with this image chosen.
+    const html = await (await get(`/admin/cuisines/${cuisineId}`)).text()
+    expect(html).toContain('enctype="multipart/form-data"')
+    expect(html).toMatch(new RegExp(`name="image_id" value="${m.id}" checked`))
+  })
+
+  it('picks an existing library image, or none, without uploading', async () => {
+    const img = { content_type: 'image/webp', size_bytes: 1, width: null, height: null }
+    const id = await createMedia(db, { ...img, r2_key: 'cuisines/x.webp', folder: 'cuisines', alt: 'Dates' })
+    await createMedia(db, { ...img, r2_key: 'gallery/y.webp', folder: 'gallery', alt: 'Gallery only' })
+    // Only images from the cuisines folder are offered.
+    const html = await (await get(`/admin/cuisines/${cuisineId}`)).text()
+    expect(html).toContain('Dates')
+    expect(html).not.toContain('Gallery only')
+    expect((await post(`/admin/cuisines/${cuisineId}`, form({ image_id: String(id) }))).status).toBe(303)
+    expect((await getCuisineById(db, cuisineId))?.image_id).toBe(id)
+    expect(await listMedia(db)).toHaveLength(2)
+
+    expect((await post(`/admin/cuisines/${cuisineId}`, form({ name_bm: '' }))).status).toBe(303)
+    expect(await getCuisineById(db, cuisineId)).toMatchObject({ image_id: null, name_bm: null })
+  })
+
+  it('requires alt text for an uploaded image and stores nothing', async () => {
+    const res = await post(`/admin/cuisines/${cuisineId}`, form({ image_file: png(), image_alt: ' ' }))
+    expect(res.status).toBe(400)
+    expect(await res.text()).toContain('Please describe the image')
+    expect(await listMedia(db)).toHaveLength(0)
+  })
+
+  it('shows the BM name and description on the public site with ?lang=bm, English otherwise', async () => {
+    await post(`/admin/cuisines/${cuisineId}`, form())
+    await post('/admin/packages/new', new URLSearchParams({ name: 'Mandi', slug: 'mandi', branch_id: String(branchId), cuisine_id: String(cuisineId), price_sen: '30', min_pax: '10', inclusions: '', status: 'published' }))
+    const bm = await (await app.request('/packages?branch=shah-alam&lang=bm', {}, env)).text()
+    expect(bm).toContain('Arab (BM)')
+    expect(bm).toContain('Nasi')
+    const en = await (await app.request('/packages?branch=shah-alam', {}, env)).text()
+    expect(en).not.toContain('Arab (BM)')
+    expect(await (await app.request('/packages?branch=shah-alam&cuisine=arab&lang=bm', {}, env)).text()).toContain('Arab (BM)')
   })
 })
 

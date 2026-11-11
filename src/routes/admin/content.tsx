@@ -3,7 +3,7 @@ import { Hono, type Context } from 'hono'
 import type { z } from 'zod'
 import { createBranch, getBranchById, listBranches, updateBranch, type Branch } from '../../db/branches'
 import { createCuisine, getCuisineById, listCuisines, updateCuisine, type Cuisine } from '../../db/cuisines'
-import { listMedia, type Media } from '../../db/media'
+import { listMedia, type Media, type MediaFolder } from '../../db/media'
 import { createMenuItem, getMenuItemById, listMenuItems, updateMenuItem } from '../../db/menu_items'
 import { createOccasion, getOccasionById, listOccasions, updateOccasion } from '../../db/occasions'
 import { createPackage, getPackageById, listPackages, updatePackage } from '../../db/packages'
@@ -11,10 +11,12 @@ import type { Status } from '../../db/shared'
 import type { AdminEnv } from '../../lib/auth'
 import { formatRM } from '../../lib/format'
 import { adminT } from '../../lib/i18n'
+import { imgUrl, storeUpload } from '../../lib/images'
 import {
   branchSchema,
   cuisineSchema,
   menuItemSchema,
+  IMAGE_TYPES,
   occasionSchema,
   packageSchema,
 } from '../../lib/validation'
@@ -25,7 +27,7 @@ import { StatusPill } from '../../views/components/StatusPill'
 // One editor for every "content" table. Each table is described by a Resource below:
 // its schema, form fields and db functions. Validation lives in the zod schemas.
 
-type Kind = 'text' | 'slug' | 'textarea' | 'int' | 'price' | 'lines' | 'checkbox' | 'status' | 'branch' | 'cuisine' | 'image'
+type Kind = 'text' | 'slug' | 'textarea' | 'int' | 'price' | 'lines' | 'checkbox' | 'status' | 'branch' | 'cuisine' | 'image' | 'upload'
 type Field = { name: string; kind: Kind; required?: boolean }
 type Row = { id: number; name: string; status: Status } & Record<string, unknown>
 type Values = Record<string, string>
@@ -38,6 +40,8 @@ type Resource = {
   key: Section
   schema: z.ZodType<Record<string, unknown>>
   fields: Field[]
+  /** With an 'upload' field: the media folder new images go to. */
+  uploadFolder?: MediaFolder
   list(db: D1Database): Promise<Row[]>
   get(db: D1Database, id: number): Promise<Row | null>
   create(db: D1Database, input: Record<string, unknown>): Promise<number>
@@ -51,6 +55,7 @@ function define<S extends z.ZodType, R extends { id: number; name: string; statu
   key: Section
   schema: S
   fields: Field[]
+  uploadFolder?: MediaFolder
   list(db: D1Database): Promise<L[]>
   get(db: D1Database, id: number): Promise<R | null>
   create(db: D1Database, input: z.output<S>): Promise<number>
@@ -138,11 +143,16 @@ export const resources: Resource[] = [
   define({
     key: 'cuisines',
     schema: cuisineSchema,
+    uploadFolder: 'cuisines',
     fields: [
       { name: 'name', kind: 'text', required: true },
+      { name: 'name_bm', kind: 'text' },
       { name: 'slug', kind: 'slug', required: true },
       { name: 'description', kind: 'textarea' },
-      ...meta,
+      { name: 'description_bm', kind: 'textarea' },
+      { name: 'sort_order', kind: 'int' },
+      { name: 'status', kind: 'status' },
+      { name: 'image_id', kind: 'upload' },
     ],
     list: listCuisines,
     get: getCuisineById,
@@ -234,6 +244,43 @@ const Control = ({ f, value, error, options }: { f: Field; value: string; error?
   )
 }
 
+/** Upload a new image, or pick one from the library (radio cards with thumbnails). */
+const ImagePicker = ({ value, alt, errors, media }: { value: string; alt: string; errors: Errors; media: Media[] }) => {
+  const t = adminT.media
+  return (
+    <fieldset class="image-picker">
+      <legend>{adminT.fields.image_id}</legend>
+      <p class="caption">{t.uploadNew}</p>
+      <div class="form__grid">
+        <FormField id="image_file" label={t.file} error={errors.image_file}>
+          <input id="image_file" name="image_file" type="file" class="input" accept={[...IMAGE_TYPES, '.heic', '.heif'].join(',')} {...fieldAria('image_file', errors.image_file)} />
+        </FormField>
+        <FormField id="image_alt" label={t.alt} error={errors.image_alt}>
+          <input id="image_alt" name="image_alt" type="text" class="input" maxlength={300} value={alt} {...fieldAria('image_alt', errors.image_alt)} />
+        </FormField>
+      </div>
+      <fieldset class="image-picker__library">
+        <legend>{t.orChoose}</legend>
+        {/* shortcut: renders the whole library; add paging or a folder filter if it grows past a few hundred images. */}
+        <div class="option-grid">
+          <label class="option-card">
+            <input type="radio" name="image_id" value="" checked={!value} class="visually-hidden" />
+            <span class="option-card__photo" aria-hidden="true" />
+            <span class="caption">{adminT.noImage}</span>
+          </label>
+          {media.map((m) => (
+            <label class="option-card">
+              <input type="radio" name="image_id" value={String(m.id)} checked={value === String(m.id)} class="visually-hidden" />
+              <img class="option-card__photo" src={imgUrl(m.r2_key, 'thumb')} alt="" loading="lazy" decoding="async" />
+              <span class="caption">{m.alt}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+    </fieldset>
+  )
+}
+
 type FormProps = { r: Resource; values: Values; errors: Errors; options: Options; id?: number }
 
 const FormPage = ({ r, values, errors, options, id }: FormProps) => {
@@ -244,7 +291,12 @@ const FormPage = ({ r, values, errors, options, id }: FormProps) => {
       <div class="admin-head">
         <h1>{heading}</h1>
       </div>
-      <form method="post" class="panel form" novalidate>
+      <form
+        method="post"
+        class="panel form"
+        enctype={r.fields.some((f) => f.kind === 'upload') ? 'multipart/form-data' : undefined}
+        novalidate
+      >
         {Object.keys(errors).length > 0 && (
           <p class="notice notice--error" role="alert">
             {adminT.formError}
@@ -252,8 +304,12 @@ const FormPage = ({ r, values, errors, options, id }: FormProps) => {
         )}
         <div class="form__grid">
           {r.fields.map((f) => (
-            <div class={f.kind === 'textarea' || f.kind === 'lines' ? 'form__wide' : undefined}>
-              <Control f={f} value={values[f.name] ?? ''} error={errors[f.name]} options={options} />
+            <div class={f.kind === 'textarea' || f.kind === 'lines' || f.kind === 'upload' ? 'form__wide' : undefined}>
+              {f.kind === 'upload' ? (
+                <ImagePicker value={values[f.name] ?? ''} alt={values.image_alt ?? ''} errors={errors} media={options.media.filter((m) => m.folder === r.uploadFolder)} />
+              ) : (
+                <Control f={f} value={values[f.name] ?? ''} error={errors[f.name]} options={options} />
+              )}
             </div>
           ))}
         </div>
@@ -337,19 +393,30 @@ export function contentRoutes(r: Resource) {
   const validate = zValidator('form', r.schema, async (result, c) => {
     if (result.success) return
     const bad = new Set(result.error.issues.map((i) => String(i.path[0])))
-    const errors = Object.fromEntries(r.fields.filter((f) => bad.has(f.name)).map((f) => [f.name, errorFor(f)]))
+    const errors: Errors = Object.fromEntries(r.fields.filter((f) => bad.has(f.name)).map((f) => [f.name, errorFor(f)]))
+    if (bad.has('image_file')) errors.image_file = adminT.media.errors.file
+    if (bad.has('image_alt')) errors.image_alt = adminT.media.errors.alt
     const id = c.req.param('id')
     return renderForm(c as unknown as Context<AdminEnv>, result.data as Values, errors, id ? Number(id) : undefined)
   })
 
-  // Saves, or shows the form again if the slug is already in use. A falsy result means the row is gone.
-  const save = async (c: Context<AdminEnv>, write: () => Promise<number | boolean>, id?: number) => {
+  // Stores an uploaded image first (it then becomes the row's image), then saves the row.
+  // Shows the form again if the upload fails or the slug is already in use. A falsy result means the row is gone.
+  const save = async (c: Context<AdminEnv>, input: Record<string, unknown>, id?: number) => {
+    const form = async () => (await c.req.parseBody()) as Values
+    if (r.uploadFolder && input.image_file instanceof File) {
+      const stored = await storeUpload(c.env, r.uploadFolder, input.image_file, String(input.image_alt))
+      if (typeof stored === 'string') return renderForm(c, await form(), { image_file: adminT.media[stored] }, id)
+      input.image_id = stored
+    }
     let ok
     try {
-      ok = await write()
+      ok = id ? await r.update(c.env.DB, id, input) : await r.create(c.env.DB, input)
     } catch (e) {
       if (!isSlugTaken(e)) throw e
-      return renderForm(c, (await c.req.parseBody()) as Values, { slug: adminT.errors.slugTaken }, id)
+      // A just-uploaded image is in the library now: keep it selected rather than uploading it again.
+      const values = { ...(await form()), image_id: String(input.image_id ?? ''), image_alt: '' }
+      return renderForm(c, values, { slug: adminT.errors.slugTaken }, id)
     }
     if (!ok) return c.notFound()
     // shortcut: public pages are not edge-cached yet, so there is nothing to purge; add purging here when they are.
@@ -360,7 +427,7 @@ export function contentRoutes(r: Resource) {
 
   app.get('/new', (c) => renderForm(c, NEW_DEFAULTS, {}))
 
-  app.post('/new', validate, (c) => save(c, () => r.create(c.env.DB, c.req.valid('form'))))
+  app.post('/new', validate, (c) => save(c, c.req.valid('form')))
 
   app.get('/:id{[0-9]+}', async (c) => {
     const id = Number(c.req.param('id'))
@@ -370,7 +437,7 @@ export function contentRoutes(r: Resource) {
 
   app.post('/:id{[0-9]+}', validate, (c) => {
     const id = Number(c.req.param('id'))
-    return save(c, () => r.update(c.env.DB, id, c.req.valid('form')), id)
+    return save(c, c.req.valid('form'), id)
   })
 
   return app

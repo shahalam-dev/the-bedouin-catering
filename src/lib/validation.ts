@@ -58,7 +58,6 @@ export const branchSchema = z.object({
   phone: text(30),
 })
 
-export const cuisineSchema = z.object({ ...common, slug, description: text(1000) })
 
 export const occasionSchema = z.object({ ...common, slug, description: text(1000) })
 
@@ -96,10 +95,30 @@ export const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic
 // Some browsers (e.g. Chrome on Windows) send HEIC files with an empty type.
 const uploadType = (f: File) => f.type || (/\.hei[cf]$/i.test(f.name) ? 'image/heic' : '')
 
+const imageFile = z
+  .instanceof(File)
+  .refine((f) => (IMAGE_TYPES as readonly string[]).includes(uploadType(f)) && f.size > 0 && f.size <= MAX_UPLOAD_BYTES)
+const alt = z.string().trim().min(3).max(300)
+
 export const mediaUploadSchema = z.object({
-  folder: z.enum(['packages', 'menu', 'gallery']),
-  alt: z.string().trim().min(3).max(300),
-  file: z
-    .instanceof(File)
-    .refine((f) => (IMAGE_TYPES as readonly string[]).includes(uploadType(f)) && f.size > 0 && f.size <= MAX_UPLOAD_BYTES),
+  folder: z.enum(['packages', 'menu', 'gallery', 'cuisines']),
+  alt,
+  file: imageFile,
 })
+
+/**
+ * Cuisine form, with an optional image upload: when a file is sent it becomes the image
+ * (stored in the 'cuisines' folder) and needs alt text; otherwise image_id picks from the library.
+ */
+export const cuisineSchema = z
+  .object({
+    ...common,
+    slug,
+    name_bm: text(120),
+    description: text(1000),
+    description_bm: text(1000),
+    // An empty file input arrives as "" (or a nameless, empty File): no upload.
+    image_file: z.preprocess((v) => (v === '' || (v instanceof File && v.size === 0 && !v.name) ? undefined : v), imageFile.optional()).transform((v) => v ?? null),
+    image_alt: z.string().trim().default(''),
+  })
+  .refine((v) => !v.image_file || alt.safeParse(v.image_alt).success, { path: ['image_alt'] })
