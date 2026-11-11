@@ -1,10 +1,13 @@
+import type { Lang } from '../lib/i18n'
 import { changed, type Status, type WithImage } from './shared'
 
 export type Cuisine = {
   id: number
   slug: string
   name: string
+  name_bm: string | null
   description: string | null
+  description_bm: string | null
   image_id: number | null
   sort_order: number
   status: Status
@@ -13,6 +16,10 @@ export type Cuisine = {
 }
 
 export type CuisineInput = Omit<Cuisine, 'id' | 'created_at' | 'updated_at'>
+
+/** Name and description in the visitor's language; BM falls back to English when not filled in. */
+export const inLang = <T extends Cuisine>(c: T, lang: Lang): T =>
+  lang === 'bm' ? { ...c, name: c.name_bm || c.name, description: c.description_bm || c.description } : c
 
 export async function listPublishedCuisines(db: D1Database): Promise<(Cuisine & WithImage)[]> {
   const { results } = await db
@@ -60,10 +67,10 @@ export function getPublishedCuisineBySlug(db: D1Database, slug: string): Promise
 export async function createCuisine(db: D1Database, c: CuisineInput): Promise<number> {
   const row = await db
     .prepare(
-      `INSERT INTO cuisines (slug, name, description, image_id, sort_order, status)
-       VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
+      `INSERT INTO cuisines (slug, name, name_bm, description, description_bm, image_id, sort_order, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
     )
-    .bind(c.slug, c.name, c.description, c.image_id, c.sort_order, c.status)
+    .bind(c.slug, c.name, c.name_bm, c.description, c.description_bm, c.image_id, c.sort_order, c.status)
     .first<{ id: number }>()
   return row!.id
 }
@@ -71,11 +78,12 @@ export async function createCuisine(db: D1Database, c: CuisineInput): Promise<nu
 export async function updateCuisine(db: D1Database, id: number, c: CuisineInput): Promise<boolean> {
   const r = await db
     .prepare(
-      `UPDATE cuisines SET slug = ?, name = ?, description = ?, image_id = ?, sort_order = ?, status = ?,
+      `UPDATE cuisines SET slug = ?, name = ?, name_bm = ?, description = ?, description_bm = ?, image_id = ?,
+         sort_order = ?, status = ?,
          updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
        WHERE id = ?`,
     )
-    .bind(c.slug, c.name, c.description, c.image_id, c.sort_order, c.status, id)
+    .bind(c.slug, c.name, c.name_bm, c.description, c.description_bm, c.image_id, c.sort_order, c.status, id)
     .run()
   return changed(r)
 }

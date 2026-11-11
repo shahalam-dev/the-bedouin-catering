@@ -1,3 +1,5 @@
+import { createMedia, type MediaFolder } from '../db/media'
+
 // Fixed sizes served by /img/:preset/:key. Only these exist, so nobody can request
 // arbitrary widths and burn transformation quota.
 export const IMAGE_WIDTHS = { thumb: 400, card: 800, hero: 1600 } as const
@@ -30,3 +32,33 @@ export function imagesErrorCode(e: unknown): number | undefined {
 const BAD_INPUT_CODES = new Set([9412, 9413, 9520, 9522])
 
 export const isBadImageError = (e: unknown) => BAD_INPUT_CODES.has(imagesErrorCode(e) ?? 0)
+
+/**
+ * Re-encodes an upload to WebP, stores it in R2 under `<folder>/` and adds its media row.
+ * Returns the media id, or why conversion failed (nothing is stored then).
+ */
+export async function storeUpload(
+  env: Env,
+  folder: MediaFolder,
+  file: File,
+  alt: string,
+): Promise<number | 'unreadable' | 'unavailable'> {
+  // Only the re-encoded WebP is stored, never the original (this also drops EXIF/GPS).
+  let webp: ArrayBuffer
+  try {
+    webp = await toWebp(env.IMAGES, file)
+  } catch (e) {
+    console.error('upload: image conversion failed', { code: imagesErrorCode(e), error: String(e) })
+    return isBadImageError(e) ? 'unreadable' : 'unavailable'
+  }
+  // A new random key per upload, so /media and /img can cache it forever.
+  const key = `${folder}/${crypto.randomUUID()}.webp`
+  await env.MEDIA.put(key, webp, { httpMetadata: { contentType: 'image/webp' } })
+  try {
+    return await createMedia(env.DB, { r2_key: key, folder, alt, content_type: 'image/webp', size_bytes: webp.byteLength, width: null, height: null })
+  } catch (e) {
+    // Do not leave an object no row points to.
+    await env.MEDIA.delete(key)
+    throw e
+  }
+}

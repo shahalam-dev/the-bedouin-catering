@@ -215,3 +215,30 @@ body.admin {
   padding: var(--space-3);
   font-size: var(--fs-caption);
 }
+
+/* Image picker (upload or choose from library) */
+.image-picker,
+.image-picker__library {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.image-picker legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  color: var(--ink);
+  font-weight: 600;
+}
+.image-picker__library {
+  margin-top: var(--space-4);
+}
+.image-picker .option-grid {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+.image-picker .option-card__photo {
+  width: 100%;
+  object-fit: cover;
+}

@@ -1,8 +1,8 @@
 import { zValidator } from '@hono/zod-validator'
 import { Hono, type Context } from 'hono'
-import { createMedia, listMedia, type Media, type MediaFolder } from '../../db/media'
+import { listMedia, type Media, type MediaFolder } from '../../db/media'
 import type { AdminEnv } from '../../lib/auth'
-import { imagesErrorCode, imgUrl, isBadImageError, toWebp } from '../../lib/images'
+import { imgUrl, storeUpload } from '../../lib/images'
 import { adminT } from '../../lib/i18n'
 import { IMAGE_TYPES, mediaUploadSchema } from '../../lib/validation'
 import { Button } from '../../views/components/Button'
@@ -101,25 +101,10 @@ media.post(
   }),
   async (c) => {
     const { folder, alt, file } = c.req.valid('form')
-    // Only the re-encoded WebP is stored, never the original (this also drops EXIF/GPS).
-    let webp: ArrayBuffer
-    try {
-      webp = await toWebp(c.env.IMAGES, file)
-    } catch (e) {
-      const bad = isBadImageError(e)
-      console.error('upload: image conversion failed', { code: imagesErrorCode(e), error: String(e) })
-      c.status(bad ? 422 : 503)
-      return c.render(<MediaPage items={await listMedia(c.env.DB)} values={{ folder, alt }} failure={bad ? t.unreadable : t.unavailable} />)
-    }
-    // A new random key per upload, so /media and /img can cache it forever.
-    const key = `${folder}/${crypto.randomUUID()}.webp`
-    await c.env.MEDIA.put(key, webp, { httpMetadata: { contentType: 'image/webp' } })
-    try {
-      await createMedia(c.env.DB, { r2_key: key, folder, alt, content_type: 'image/webp', size_bytes: webp.byteLength, width: null, height: null })
-    } catch (e) {
-      // Do not leave an object no row points to.
-      await c.env.MEDIA.delete(key)
-      throw e
+    const stored = await storeUpload(c.env, folder, file, alt)
+    if (typeof stored === 'string') {
+      c.status(stored === 'unreadable' ? 422 : 503)
+      return c.render(<MediaPage items={await listMedia(c.env.DB)} values={{ folder, alt }} failure={t[stored]} />)
     }
     return c.redirect('/admin/media?uploaded=1', 303)
   },

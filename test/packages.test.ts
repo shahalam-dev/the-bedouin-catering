@@ -49,7 +49,7 @@ beforeEach(async () => {
   const branch = { address: null, phone: null, image_id: null, status: 'published' as const }
   branchA = await createBranch(db, { ...branch, slug: 'a', name: 'Branch A', sort_order: 1 })
   branchB = await createBranch(db, { ...branch, slug: 'b', name: 'Branch B', sort_order: 2 })
-  const cuisine = { description: null, image_id: null, status: 'published' as const }
+  const cuisine = { name_bm: null, description: null, description_bm: null, image_id: null, status: 'published' as const }
   arab = await createCuisine(db, { ...cuisine, slug: 'arab', name: 'Arab', sort_order: 1 })
   malay = await createCuisine(db, { ...cuisine, slug: 'malay', name: 'Malay', sort_order: 2 })
 })

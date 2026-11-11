@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { listPublishedCuisines, type Cuisine } from '../../db/cuisines'
+import { inLang, listPublishedCuisines, type Cuisine } from '../../db/cuisines'
 import { listPublishedMenuItems, type MenuItem } from '../../db/menu_items'
 import { useI18n, withLang } from '../../lib/i18n'
 import type { WithImage } from '../../db/shared'
@@ -8,7 +8,7 @@ import { SectionTitle } from '../../views/components/SectionTitle'
 
 const MenuPage = ({ cuisines, current, items }: { cuisines: Cuisine[]; current?: Cuisine; items: (MenuItem & WithImage)[] }) => {
   const { lang, t } = useI18n()
-  const filters = [{ slug: '', name: t.menu.all }, ...cuisines]
+  const filters = [{ slug: '', name: t.menu.all }, ...cuisines.map((x) => inLang(x, lang))]
   return (
     <section class="section">
       <title>{`${t.menu.title} | ${t.siteName}`}</title>
