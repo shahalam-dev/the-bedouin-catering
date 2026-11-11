@@ -114,11 +114,16 @@ export const resources: Resource[] = [
   define({
     key: 'occasions',
     schema: occasionSchema,
+    uploadFolder: 'occasions',
     fields: [
       { name: 'name', kind: 'text', required: true },
+      { name: 'name_bm', kind: 'text' },
       { name: 'slug', kind: 'slug', required: true },
       { name: 'description', kind: 'textarea' },
-      ...meta,
+      { name: 'description_bm', kind: 'textarea' },
+      { name: 'sort_order', kind: 'int' },
+      { name: 'status', kind: 'status' },
+      { name: 'image_id', kind: 'upload' },
     ],
     list: listOccasions,
     get: getOccasionById,

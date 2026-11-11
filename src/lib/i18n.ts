@@ -313,7 +313,7 @@ export const adminT = {
     file: 'Image file (JPG, PNG, WebP or HEIC, up to 15 MB)',
     alt: 'Alt text: describe the image for people who cannot see it, e.g. "Lamb mandi on a large platter"',
     folder: 'Folder',
-    folders: { packages: 'Packages', menu: 'Menu', gallery: 'Gallery', cuisines: 'Cuisines', branches: 'Branches' },
+    folders: { packages: 'Packages', menu: 'Menu', gallery: 'Gallery', cuisines: 'Cuisines', branches: 'Branches', occasions: 'Occasions' },
     submit: 'Upload',
     uploaded: 'Image uploaded.',
     library: 'Image library',

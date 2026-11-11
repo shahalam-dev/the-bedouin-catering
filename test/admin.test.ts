@@ -28,6 +28,7 @@ beforeEach(async () => {
     db.prepare('DELETE FROM enquiries'),
     db.prepare('DELETE FROM packages'),
     db.prepare('DELETE FROM menu_items'),
+    db.prepare('DELETE FROM occasions'),
     db.prepare('DELETE FROM branches'),
     db.prepare('DELETE FROM cuisines'),
     db.prepare('DELETE FROM media'),
@@ -266,6 +267,32 @@ describe('branch editor', () => {
 
     expect(await (await app.request('/packages?lang=bm', {}, env)).text()).toContain('Cawangan Shah Alam')
     expect(await (await app.request('/packages', {}, env)).text()).not.toContain('Cawangan Shah Alam')
+  })
+})
+
+describe('occasion editor', () => {
+  it('saves BM copy, uploads into the occasions folder, offers only occasion images, shows BM publicly', async () => {
+    await createMedia(db, { r2_key: 'branches/x.webp', folder: 'branches', alt: 'Branch only', content_type: 'image/webp', size_bytes: 1, width: null, height: null })
+    const fd = new FormData()
+    const png = new File([Uint8Array.from(atob(PNG_B64), (ch) => ch.charCodeAt(0))], 'w.png', { type: 'image/png' })
+    const fields = { name: 'Wedding', name_bm: 'Perkahwinan', slug: 'wedding', description: 'Big day', description_bm: 'Hari besar', sort_order: '0', status: 'published', image_id: '', image_alt: 'Wedding buffet table', image_file: png }
+    for (const [k, v] of Object.entries(fields)) fd.set(k, v)
+    expect((await post('/admin/occasions/new', fd)).status).toBe(303)
+
+    const [m] = (await listMedia(db)).filter((x) => x.folder === 'occasions')
+    expect(m.r2_key).toMatch(/^occasions\//)
+    const row = await db.prepare('SELECT * FROM occasions').first()
+    expect(row).toMatchObject({ name_bm: 'Perkahwinan', description_bm: 'Hari besar', image_id: m.id })
+
+    const html = await (await get(`/admin/occasions/${row!.id}`)).text()
+    expect(html).toContain('Wedding buffet table')
+    expect(html).not.toContain('Branch only')
+
+    const bm = await (await app.request('/occasions?lang=bm', {}, env)).text()
+    expect(bm).toContain('Perkahwinan')
+    expect(bm).toContain('Hari besar')
+    expect(await (await app.request('/?lang=bm', {}, env)).text()).toContain('Perkahwinan')
+    expect(await (await app.request('/occasions', {}, env)).text()).not.toContain('Perkahwinan')
   })
 })
 

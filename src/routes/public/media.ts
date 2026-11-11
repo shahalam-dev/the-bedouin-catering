@@ -3,7 +3,7 @@ import { Hono } from 'hono'
 // Serves admin-uploaded images from R2. Only the upload folders are exposed.
 const media = new Hono<{ Bindings: Env }>()
 
-media.get('/:key{(?:packages|menu|gallery|cuisines|branches)/[^/]+}', async (c) => {
+media.get('/:key{(?:packages|menu|gallery|cuisines|branches|occasions)/[^/]+}', async (c) => {
   const obj = await c.env.MEDIA.get(c.req.param('key'), { onlyIf: c.req.raw.headers })
   if (!obj) return c.notFound()
 
