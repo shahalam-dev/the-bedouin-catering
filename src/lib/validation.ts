@@ -56,8 +56,6 @@ const common = { name, sort_order: sortOrder, status, image_id: optional(id) }
 
 export const enquiryStatusSchema = z.object({
   status: z.enum(['new', 'contacted', 'closed']),
-  // Which list filter to go back to.
-  filter: optional(z.enum(['new', 'contacted', 'closed'])),
 })
 
 export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024

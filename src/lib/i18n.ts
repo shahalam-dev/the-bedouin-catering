@@ -305,7 +305,7 @@ export const adminT = {
     message: 'Message',
     pax: (n: number) => `${n} pax`,
     update: 'Update',
-    statusFor: (name: string) => `Status for ${name}`,
+    backToList: 'All enquiries',
     older: 'Older enquiries',
     newer: 'Newer enquiries',
   },
