@@ -352,12 +352,20 @@ describe('enquiries', () => {
 
     const html = await (await get('/admin/enquiries?status=new')).text()
     expect(html).toContain('Aisha')
-    expect(html).toContain('Shah Alam')
     expect(html).toContain('href="tel:+60123456789"')
+    expect(html).toContain(`href="/admin/enquiries/${id}"`)
+    expect(html).not.toContain('Shah Alam')
+    expect(html).not.toContain('<select')
 
-    const res = await post(`/admin/enquiries/${id}/status`, new URLSearchParams({ status: 'contacted', filter: 'new' }))
+    const detail = await (await get(`/admin/enquiries/${id}`)).text()
+    expect(detail).toContain('Shah Alam')
+    expect(detail).toContain('80 pax')
+    expect(detail).toContain(`action="/admin/enquiries/${id}/status"`)
+    expect((await get('/admin/enquiries/999999')).status).toBe(404)
+
+    const res = await post(`/admin/enquiries/${id}/status`, new URLSearchParams({ status: 'contacted' }))
     expect(res.status).toBe(303)
-    expect(res.headers.get('Location')).toBe('/admin/enquiries?status=new')
+    expect(res.headers.get('Location')).toBe(`/admin/enquiries/${id}?saved=1`)
     expect((await getEnquiryById(db, id))?.status).toBe('contacted')
 
     expect(await (await get('/admin/enquiries?status=new')).text()).not.toContain('Aisha')
