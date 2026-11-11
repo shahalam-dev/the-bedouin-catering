@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { listPublishedClients, type Client } from '../../db/clients'
+import { listPublishedGallery, type GalleryItem } from '../../db/gallery'
 import { listPublishedOccasions, type Occasion } from '../../db/occasions'
 import { listPublishedPackages, type PackageWithNames } from '../../db/packages'
 import { inLang, type WithImage } from '../../db/shared'
@@ -10,6 +11,7 @@ import { useI18n, withLang } from '../../lib/i18n'
 import { TEAM } from '../../lib/team'
 import { Button } from '../../views/components/Button'
 import { ClientLogos } from '../../views/components/ClientLogos'
+import { EventGallery } from '../../views/components/EventGallery'
 import { HeroVideo } from '../../views/components/HeroVideo'
 import { StarIcon } from '../../views/components/Icons'
 import { PackageCard } from '../../views/components/PackageCard'
@@ -119,12 +121,13 @@ const TeamSection = () => {
   )
 }
 
-// The rest are on /clients.
+// The rest are on /clients and /gallery.
 const HOME_CLIENTS = 8
+const HOME_GALLERY = 10
 
-type Props = { clients: (Client & WithImage)[]; occasions: Occasion[]; packages: PackageWithNames[]; testimonials: (Testimonial & WithImage)[] }
+type Props = { clients: (Client & WithImage)[]; gallery: (GalleryItem & WithImage)[]; event?: string; occasions: Occasion[]; packages: PackageWithNames[]; testimonials: (Testimonial & WithImage)[] }
 
-const HomePage = ({ clients, occasions, packages, testimonials }: Props) => {
+const HomePage = ({ clients, gallery, event, occasions, packages, testimonials }: Props) => {
   const { lang, t } = useI18n()
   return (
     <>
@@ -145,6 +148,20 @@ const HomePage = ({ clients, occasions, packages, testimonials }: Props) => {
       </section>
 
       {occasions.length > 0 && <OccasionStrip occasions={occasions} />}
+
+      {gallery.length > 0 && (
+        <section class="section gallery" id="gallery">
+          <div class="container">
+            <SectionTitle as="h2" title={t.gallery.title} lead={t.gallery.lead} />
+            <EventGallery items={gallery} path="/" event={event} limit={HOME_GALLERY} />
+            <div class="section__more">
+              <Button variant="outline" href={withLang('/gallery', lang)}>
+                {t.gallery.viewAll}
+              </Button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {clients.length > 0 && (
         <section class="section clients">
@@ -198,14 +215,15 @@ const home = new Hono<{ Bindings: Env }>()
 
 home.get('/', async (c) => {
   const db = c.env.DB
-  const [clients, occasions, packages, testimonials] = await Promise.all([
+  const [clients, gallery, occasions, packages, testimonials] = await Promise.all([
     listPublishedClients(db, HOME_CLIENTS),
+    listPublishedGallery(db),
     listPublishedOccasions(db),
     listPublishedPackages(db), // already sorted popular first
     listPublishedTestimonials(db),
   ])
   return c.render(
-    <HomePage clients={clients} occasions={occasions} packages={packages.slice(0, 3)} testimonials={testimonials} />,
+    <HomePage clients={clients} gallery={gallery} event={c.req.query('event')} occasions={occasions} packages={packages.slice(0, 3)} testimonials={testimonials} />,
   )
 })
 

@@ -13,6 +13,8 @@ beforeEach(async () => {
     db.prepare('DELETE FROM occasions'),
     db.prepare('DELETE FROM testimonials'),
     db.prepare('DELETE FROM clients'),
+    db.prepare('DELETE FROM gallery_items'),
+    db.prepare("DELETE FROM media WHERE r2_key LIKE 'gallery/%'"),
     db.prepare("INSERT INTO occasions (slug, name, status) VALUES ('weddings', 'Weddings', 'published'), ('secret', 'Secret Party', 'draft')"),
     db.prepare(
       "INSERT INTO testimonials (name, event_type, quote, rating, status) VALUES ('Aisyah', 'Wedding', 'Lovely food', 4, 'published'), ('Hidden', NULL, 'Draft quote', 5, 'draft')",
@@ -97,5 +99,30 @@ describe('card photos', () => {
     expect(html).toContain('alt="Lamb mandi on rice"')
     expect(html).toContain('<span class="card__photo" aria-hidden="true"></span>')
     await db.prepare('DELETE FROM media').run()
+  })
+
+  it('shows the event gallery above clients, filtered by ?event= with counts from all items', async () => {
+    const { meta } = await db
+      .prepare("INSERT INTO media (r2_key, folder, alt, content_type, size_bytes) VALUES ('gallery/a.webp', 'gallery', 'Buffet line', 'image/webp', 1)")
+      .run()
+    const img = meta.last_row_id
+    await db.batch([
+      db.prepare("INSERT INTO gallery_items (name, event_type, image_id, status) VALUES ('Garden Wedding', 'Weddings', ?1, 'published'), ('Annual Dinner', 'Corporate', ?1, 'published'), ('Draft Party', 'Birthdays', ?1, 'draft'), ('No Photo', 'Birthdays', NULL, 'published')").bind(img),
+      db.prepare("INSERT INTO clients (name, image_id, status) VALUES ('Acme', ?, 'published')").bind(img),
+    ])
+
+    const html = await (await app.request('/', {}, env)).text()
+    expect(html.indexOf('id="gallery"')).toBeGreaterThan(-1)
+    expect(html.indexOf('id="gallery"')).toBeLessThan(html.indexOf('class="section clients"'))
+    expect(html).toContain('Garden Wedding')
+    expect(html).toContain('Annual Dinner')
+    expect(html).not.toContain('Draft Party')
+    expect(html).not.toContain('No Photo')
+
+    const filtered = await (await app.request('/?event=Corporate', {}, env)).text()
+    expect(filtered).not.toContain('Garden Wedding')
+    expect(filtered).toContain('Annual Dinner')
+    expect(filtered).toMatch(/aria-current="page">Corporate <span class="gallery-chip__count">\(1\)/)
+    expect(filtered).toMatch(/All <span class="gallery-chip__count">\(2\)/)
   })
 })

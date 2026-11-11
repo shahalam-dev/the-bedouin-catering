@@ -103,6 +103,12 @@ export const clientSchema = z
   .refine(altNeeded, { path: ['image_alt'] })
   .refine((v) => v.image_file || v.image_id, { path: ['image_file'] })
 
+// A gallery card is its photo, so one must be uploaded or picked from the library.
+export const galleryItemSchema = z
+  .object({ ...common, ...imageUpload, event_type: z.string().trim().min(1).max(60), caption: text(120), is_tall: checkbox })
+  .refine(altNeeded, { path: ['image_alt'] })
+  .refine((v) => v.image_file || v.image_id, { path: ['image_file'] })
+
 export const testimonialSchema = z
   .object({
     ...common,

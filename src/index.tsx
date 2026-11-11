@@ -3,6 +3,7 @@ import admin from './routes/admin'
 import clients from './routes/public/clients'
 import enquiries from './routes/api/enquiries'
 import contact from './routes/public/contact'
+import gallery from './routes/public/gallery'
 import home from './routes/public/home'
 import img from './routes/public/img'
 import media from './routes/public/media'
@@ -24,6 +25,7 @@ app.route('/', home)
 app.route('/packages', packages)
 app.route('/menu', menu)
 app.route('/occasions', occasions)
+app.route('/gallery', gallery)
 app.route('/clients', clients)
 app.route('/contact', contact)
 app.route('/api/enquiries', enquiries)

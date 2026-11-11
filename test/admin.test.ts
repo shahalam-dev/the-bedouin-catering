@@ -30,6 +30,7 @@ beforeEach(async () => {
     db.prepare('DELETE FROM menu_items'),
     db.prepare('DELETE FROM occasions'),
     db.prepare('DELETE FROM clients'),
+    db.prepare('DELETE FROM gallery_items'),
     db.prepare('DELETE FROM testimonials'),
     db.prepare('DELETE FROM branches'),
     db.prepare('DELETE FROM cuisines'),
@@ -295,6 +296,29 @@ describe('occasion editor', () => {
     expect(bm).toContain('Hari besar')
     expect(await (await app.request('/?lang=bm', {}, env)).text()).toContain('Perkahwinan')
     expect(await (await app.request('/occasions', {}, env)).text()).not.toContain('Perkahwinan')
+  })
+})
+
+describe('gallery editor', () => {
+  it('requires a photo, uploads into the gallery folder, shows the card on home and /gallery', async () => {
+    const fd = new FormData()
+    for (const [k, v] of Object.entries({ name: 'Garden Wedding', event_type: 'Weddings', caption: 'Shah Alam · 600 pax', is_tall: 'on', sort_order: '0', status: 'published', image_id: '', image_alt: '' })) fd.set(k, v)
+    expect((await post('/admin/gallery/new', fd)).status).toBe(400)
+
+    fd.set('image_file', new File([Uint8Array.from(atob(PNG_B64), (ch) => ch.charCodeAt(0))], 'w.png', { type: 'image/png' }))
+    fd.set('image_alt', 'Long banquet tables under fairy lights')
+    expect((await post('/admin/gallery/new', fd)).status).toBe(303)
+
+    const [m] = (await listMedia(db)).filter((x) => x.folder === 'gallery')
+    expect(m.r2_key).toMatch(/^gallery\//)
+    expect(await db.prepare('SELECT * FROM gallery_items').first()).toMatchObject({ name: 'Garden Wedding', event_type: 'Weddings', is_tall: 1, image_id: m.id })
+
+    for (const path of ['/', '/gallery']) {
+      const html = await (await app.request(path, {}, env)).text()
+      expect(html).toContain('alt="Long banquet tables under fairy lights"')
+      expect(html).toContain('gallery-card gallery-card--tall')
+      expect(html).toContain('Shah Alam · 600 pax')
+    }
   })
 })
 
