@@ -867,9 +867,11 @@ textarea.input {
   fill: currentColor;
 }
 .testimonials__list {
+  --t-row: 76px; /* fixed row height (names are one line) so exactly 3 rows fit */
   display: grid;
+  grid-auto-rows: var(--t-row);
   gap: var(--space-2);
-  max-height: 352px; /* about 4.5 rows, so a cut-off row hints at scrolling */
+  max-height: calc(3 * var(--t-row) + 2 * var(--space-2) + 2 * var(--space-1));
   margin: 0;
   padding: var(--space-1); /* room for the active card's shadow and focus ring */
   overflow-y: auto;
@@ -878,6 +880,7 @@ textarea.input {
 }
 .testimonials__item {
   display: flex;
+  height: 100%;
   align-items: center;
   gap: var(--space-4);
   min-height: var(--tap-min);
@@ -906,6 +909,9 @@ textarea.input {
   min-width: 0;
 }
 .testimonials__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--ink);
   font-family: var(--font-serif);
   font-size: var(--fs-h4);
@@ -1037,6 +1043,7 @@ textarea.input {
   color: var(--primary-dark);
 }
 .testimonials__foot .testimonials__name {
+  white-space: normal;
   color: var(--white);
   font-size: var(--fs-h3);
 }
