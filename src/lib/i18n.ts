@@ -38,6 +38,9 @@ const en = {
     allPackages: 'See All Packages',
     testimonialsTitle: 'What Our Guests Say',
     rating: (n: number) => `${n} out of 5 stars`,
+    teamTitle: 'Meet Our Team',
+    teamLead: 'The people who cook, plan and serve your event.',
+    teamPhotoAlt: (name: string) => `Portrait of ${name}`,
   },
   packages: {
     title: 'Our Packages',
@@ -141,6 +144,9 @@ const bm: Strings = {
     allPackages: 'Lihat Semua Pakej',
     testimonialsTitle: 'Kata Pelanggan Kami',
     rating: (n: number) => `${n} daripada 5 bintang`,
+    teamTitle: 'Kenali Pasukan Kami',
+    teamLead: 'Insan yang memasak, merancang dan menghidang untuk majlis anda.',
+    teamPhotoAlt: (name: string) => `Potret ${name}`,
   },
   packages: {
     title: 'Pakej Kami',
