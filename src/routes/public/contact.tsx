@@ -1,5 +1,5 @@
 import { Hono, type Context } from 'hono'
-import { listPublishedBranches, type Branch } from '../../db/branches'
+import { branchInLang, listPublishedBranches, type Branch } from '../../db/branches'
 import { inLang, listPublishedCuisines, type Cuisine } from '../../db/cuisines'
 import { listPublishedPackages, type PackageWithNames } from '../../db/packages'
 import { formatRM } from '../../lib/format'
@@ -77,13 +77,13 @@ const ContactPage = ({ options, values = {}, errors = [], formError, sent, siteK
               {text('email', 'email', { autocomplete: 'email' })}
               {text('event_date', 'date', { min: todayInMalaysia() })}
               {text('pax', 'number', { min: 1, max: 10000, inputmode: 'numeric' })}
-              {select('branch_id', options.branches.map((b) => ({ id: b.id, label: b.name })))}
+              {select('branch_id', options.branches.map((b) => ({ id: b.id, label: branchInLang(b, lang).name })))}
               {select('cuisine_id', options.cuisines.map((c) => ({ id: c.id, label: inLang(c, lang).name })))}
               {select(
                 'package_id',
                 options.packages.map((p) => ({
                   id: p.id,
-                  label: `${p.name} (${p.branch_name}, ${(lang === 'bm' && p.cuisine_name_bm) || p.cuisine_name}) ${formatRM(p.price_sen)} ${t.perPax}`,
+                  label: `${p.name} (${(lang === 'bm' && p.branch_name_bm) || p.branch_name}, ${(lang === 'bm' && p.cuisine_name_bm) || p.cuisine_name}) ${formatRM(p.price_sen)} ${t.perPax}`,
                 })),
               )}
             </div>

@@ -2,7 +2,7 @@ import { env } from 'cloudflare:workers'
 import { sign } from 'hono/jwt'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import app from '../src/index'
-import { createBranch } from '../src/db/branches'
+import { createBranch, getBranchById } from '../src/db/branches'
 import { createCuisine, getCuisineById } from '../src/db/cuisines'
 import { createEnquiry, getEnquiryById } from '../src/db/enquiries'
 import { createMedia, listMedia } from '../src/db/media'
@@ -32,7 +32,7 @@ beforeEach(async () => {
     db.prepare('DELETE FROM cuisines'),
     db.prepare('DELETE FROM media'),
   ])
-  branchId = await createBranch(db, { slug: 'shah-alam', name: 'Shah Alam', address: null, phone: null, image_id: null, sort_order: 0, status: 'published' })
+  branchId = await createBranch(db, { slug: 'shah-alam', name: 'Shah Alam', name_bm: null, address: null, phone: null, image_id: null, sort_order: 0, status: 'published' })
   cuisineId = await createCuisine(db, { slug: 'arab', name: 'Arab', name_bm: null, description: null, description_bm: null, image_id: null, sort_order: 0, status: 'published' })
 })
 
@@ -244,6 +244,28 @@ describe('cuisine editor', () => {
     const en = await (await app.request('/packages?branch=shah-alam', {}, env)).text()
     expect(en).not.toContain('Arab (BM)')
     expect(await (await app.request('/packages?branch=shah-alam&cuisine=arab&lang=bm', {}, env)).text()).toContain('Arab (BM)')
+  })
+})
+
+describe('branch editor', () => {
+  it('saves the BM name, uploads into the branches folder, offers only branch images, shows BM publicly', async () => {
+    await createMedia(db, { r2_key: 'cuisines/x.webp', folder: 'cuisines', alt: 'Cuisine only', content_type: 'image/webp', size_bytes: 1, width: null, height: null })
+    const fd = new FormData()
+    const png = new File([Uint8Array.from(atob(PNG_B64), (ch) => ch.charCodeAt(0))], 'shop.png', { type: 'image/png' })
+    const fields = { name: 'Shah Alam', name_bm: 'Cawangan Shah Alam', slug: 'shah-alam', address: '', phone: '', sort_order: '0', status: 'published', image_id: '', image_alt: 'Our Shah Alam kitchen', image_file: png }
+    for (const [k, v] of Object.entries(fields)) fd.set(k, v)
+    expect((await post(`/admin/branches/${branchId}`, fd)).status).toBe(303)
+
+    const [m] = (await listMedia(db)).filter((x) => x.folder === 'branches')
+    expect(m.r2_key).toMatch(/^branches\//)
+    expect(await getBranchById(db, branchId)).toMatchObject({ name_bm: 'Cawangan Shah Alam', image_id: m.id })
+
+    const html = await (await get(`/admin/branches/${branchId}`)).text()
+    expect(html).toContain('Our Shah Alam kitchen')
+    expect(html).not.toContain('Cuisine only')
+
+    expect(await (await app.request('/packages?lang=bm', {}, env)).text()).toContain('Cawangan Shah Alam')
+    expect(await (await app.request('/packages', {}, env)).text()).not.toContain('Cawangan Shah Alam')
   })
 })
 

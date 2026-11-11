@@ -51,14 +51,6 @@ const lines = z
 
 const common = { name, sort_order: sortOrder, status, image_id: optional(id) }
 
-export const branchSchema = z.object({
-  ...common,
-  slug,
-  address: text(300),
-  phone: text(30),
-})
-
-
 export const occasionSchema = z.object({ ...common, slug, description: text(1000) })
 
 export const packageSchema = z.object({
@@ -101,24 +93,24 @@ const imageFile = z
 const alt = z.string().trim().min(3).max(300)
 
 export const mediaUploadSchema = z.object({
-  folder: z.enum(['packages', 'menu', 'gallery', 'cuisines']),
+  folder: z.enum(['packages', 'menu', 'gallery', 'cuisines', 'branches']),
   alt,
   file: imageFile,
 })
 
-/**
- * Cuisine form, with an optional image upload: when a file is sent it becomes the image
- * (stored in the 'cuisines' folder) and needs alt text; otherwise image_id picks from the library.
- */
+// Forms with an optional image upload (cuisines, branches): a sent file becomes the image
+// (stored in that section's media folder) and needs alt text; otherwise image_id picks from the library.
+const imageUpload = {
+  // An empty file input arrives as "" (or a nameless, empty File): no upload.
+  image_file: z.preprocess((v) => (v === '' || (v instanceof File && v.size === 0 && !v.name) ? undefined : v), imageFile.optional()).transform((v) => v ?? null),
+  image_alt: z.string().trim().default(''),
+}
+const altNeeded = (v: { image_file: File | null; image_alt: string }) => !v.image_file || alt.safeParse(v.image_alt).success
+
 export const cuisineSchema = z
-  .object({
-    ...common,
-    slug,
-    name_bm: text(120),
-    description: text(1000),
-    description_bm: text(1000),
-    // An empty file input arrives as "" (or a nameless, empty File): no upload.
-    image_file: z.preprocess((v) => (v === '' || (v instanceof File && v.size === 0 && !v.name) ? undefined : v), imageFile.optional()).transform((v) => v ?? null),
-    image_alt: z.string().trim().default(''),
-  })
-  .refine((v) => !v.image_file || alt.safeParse(v.image_alt).success, { path: ['image_alt'] })
+  .object({ ...common, ...imageUpload, slug, name_bm: text(120), description: text(1000), description_bm: text(1000) })
+  .refine(altNeeded, { path: ['image_alt'] })
+
+export const branchSchema = z
+  .object({ ...common, ...imageUpload, slug, name_bm: text(120), address: text(300), phone: text(30) })
+  .refine(altNeeded, { path: ['image_alt'] })

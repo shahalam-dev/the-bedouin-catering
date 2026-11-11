@@ -128,12 +128,16 @@ export const resources: Resource[] = [
   define({
     key: 'branches',
     schema: branchSchema,
+    uploadFolder: 'branches',
     fields: [
       { name: 'name', kind: 'text', required: true },
+      { name: 'name_bm', kind: 'text' },
       { name: 'slug', kind: 'slug', required: true },
       { name: 'address', kind: 'textarea' },
       { name: 'phone', kind: 'text' },
-      ...meta,
+      { name: 'sort_order', kind: 'int' },
+      { name: 'status', kind: 'status' },
+      { name: 'image_id', kind: 'upload' },
     ],
     list: listBranches,
     get: getBranchById,
