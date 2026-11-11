@@ -3,6 +3,7 @@ import { listPublishedOccasions, type Occasion } from '../../db/occasions'
 import { listPublishedPackages, type PackageWithNames } from '../../db/packages'
 import { listPublishedTestimonials, type Testimonial } from '../../db/testimonials'
 import { HERO_VIDEO } from '../../lib/hero'
+import { TEAM } from '../../lib/team'
 import { useI18n, withLang } from '../../lib/i18n'
 import { Button } from '../../views/components/Button'
 import { HeroVideo } from '../../views/components/HeroVideo'
@@ -41,6 +42,37 @@ const TestimonialCard = ({ item }: { item: Testimonial }) => {
         {item.event_type && <span class="caption">{item.event_type}</span>}
       </figcaption>
     </figure>
+  )
+}
+
+const TeamSection = () => {
+  const { lang, t } = useI18n()
+  return (
+    <section class="section team">
+      <div class="container">
+        <SectionTitle as="h2" title={t.home.teamTitle} lead={t.home.teamLead} />
+        <ul class="card-grid team__list">
+          {TEAM.map((m) => (
+            <li class="card team-card">
+              <img
+                class="team-card__photo"
+                src={m.image}
+                alt={t.home.teamPhotoAlt(m.name)}
+                width="1333"
+                height="2000"
+                loading="lazy"
+                decoding="async"
+              />
+              <div class="card__body">
+                <h3>{m.name}</h3>
+                <p class="caption team-card__role">{m.role[lang]}</p>
+                <p>{m.bio[lang]}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
   )
 }
 
@@ -107,6 +139,8 @@ const HomePage = ({ occasions, packages, testimonials }: Props) => {
           </Button>
         </div>
       </section>
+
+      <TeamSection />
     </>
   )
 }

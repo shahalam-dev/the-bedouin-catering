@@ -794,6 +794,35 @@ textarea.input {
   font-weight: 700;
 }
 
+/* Home: team */
+.team__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.team-card:hover {
+  transform: none;
+}
+.team-card__photo {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  object-position: top;
+  background: var(--sand);
+}
+.team-card__role {
+  margin: 0;
+  color: var(--primary);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.team-card p {
+  margin: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .occasion-strip { overflow-x: auto; }
   .occasion-strip__track {
