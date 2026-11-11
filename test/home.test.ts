@@ -29,20 +29,31 @@ describe('home page', () => {
     const html = await res.text()
     expect(html).toContain('Weddings')
     expect(html).toContain('Lovely food')
-    expect(html).toContain('4 out of 5 stars')
+    expect(html).toContain('4 out of 5 stars') // average of published ratings
     expect(html).not.toContain('Secret Party')
     expect(html).not.toContain('Draft quote')
   })
 
-  it('shows testimonials as a looping carousel right above the team section', async () => {
+  it('shows testimonials as a list plus one quote panel, switchable via ?t= without JS', async () => {
+    await db.prepare("INSERT INTO testimonials (name, role, location, event_type, event_detail, quote, rating, status) VALUES ('Daniel Lim', 'HR Manager', 'Petaling Jaya', 'Corporate', 'Annual dinner · 300 guests', 'Great service', 5, 'published')").run()
     const html = await (await app.request('/', {}, env)).text()
     const section = html.slice(html.indexOf('class="section testimonials"'), html.indexOf('class="section team"'))
     expect(html.indexOf('cta-band')).toBeLessThan(html.indexOf('class="section testimonials"'))
-    expect(section).toContain('testimonials__track')
-    // One published item fills both halves (6 cards each); only the first card is exposed to screen readers.
-    expect(section.match(/Lovely food/g)?.length).toBe(12)
-    expect(section.match(/<ul aria-hidden="true">/g)?.length).toBe(1)
-    expect(section.match(/<li aria-hidden="true">/g)?.length).toBe(5)
+    expect(section).toContain('4.5') // average rating
+    expect(section).toContain('>DL</span>') // initials when no photo
+    expect(section).toContain('/js/testimonials.js')
+    expect(section).toContain('HR Manager · Petaling Jaya')
+    expect(section).toContain('<span class="testimonials__pill">Corporate</span>')
+    expect(section).toMatch(/<span class="testimonials__tag">Corporate<\/span>Annual dinner · 300 guests/)
+    // Both quotes rendered; only the first is visible and current.
+    expect(section.match(/class="testimonials__slide"( hidden="")?/g)).toEqual(['class="testimonials__slide"', 'class="testimonials__slide" hidden=""'])
+    expect(section.match(/aria-current="true"/g)?.length).toBe(1)
+    expect(section).toContain('01 / 02')
+
+    const second = await (await app.request('/?t=1', {}, env)).text()
+    expect(second).toMatch(/class="testimonials__slide" hidden="">.*Lovely food/s)
+    expect(second).toContain('02 / 02')
+    expect((await (await app.request('/?t=99', {}, env)).text())).toContain('01 / 02') // out of range falls back
   })
 
   it('renders BM strings and hides empty sections', async () => {

@@ -175,6 +175,10 @@ export const resources: Resource[] = [
     uploadFolder: 'testimonials',
     fields: [
       { name: 'name', kind: 'text', required: true },
+      { name: 'role', kind: 'text' },
+      { name: 'location', kind: 'text' },
+      { name: 'event_type', kind: 'text', label: adminT.fields.testimonial_event_type },
+      { name: 'event_detail', kind: 'text' },
       { name: 'quote', kind: 'textarea', required: true },
       { name: 'rating', kind: 'rating', required: true },
       ...meta,
@@ -183,7 +187,7 @@ export const resources: Resource[] = [
     get: getTestimonialById,
     create: createTestimonial,
     update: updateTestimonial,
-    summary: (t) => `${t.rating}★ · ${t.quote.slice(0, 60)}`,
+    summary: (t) => [`${t.rating}★`, t.event_type, t.quote.slice(0, 60)].filter(Boolean).join(' · '),
   }),
   define({
     key: 'branches',

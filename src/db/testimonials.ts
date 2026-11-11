@@ -3,7 +3,10 @@ import { changed, type Status, type WithImage } from './shared'
 export type Testimonial = {
   id: number
   name: string
+  role: string | null
+  location: string | null
   event_type: string | null
+  event_detail: string | null
   quote: string
   rating: number
   image_id: number | null
@@ -13,8 +16,7 @@ export type Testimonial = {
   updated_at: string
 }
 
-// event_type is legacy: still shown when set, no longer edited in the CMS.
-export type TestimonialInput = Omit<Testimonial, 'id' | 'event_type' | 'created_at' | 'updated_at'>
+export type TestimonialInput = Omit<Testimonial, 'id' | 'created_at' | 'updated_at'>
 
 export async function listPublishedTestimonials(db: D1Database): Promise<(Testimonial & WithImage)[]> {
   const { results } = await db
@@ -39,10 +41,10 @@ export function getTestimonialById(db: D1Database, id: number): Promise<Testimon
 export async function createTestimonial(db: D1Database, t: TestimonialInput): Promise<number> {
   const row = await db
     .prepare(
-      `INSERT INTO testimonials (name, quote, rating, image_id, sort_order, status)
-       VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
+      `INSERT INTO testimonials (name, role, location, event_type, event_detail, quote, rating, image_id, sort_order, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
     )
-    .bind(t.name, t.quote, t.rating, t.image_id, t.sort_order, t.status)
+    .bind(t.name, t.role, t.location, t.event_type, t.event_detail, t.quote, t.rating, t.image_id, t.sort_order, t.status)
     .first<{ id: number }>()
   return row!.id
 }
@@ -50,11 +52,11 @@ export async function createTestimonial(db: D1Database, t: TestimonialInput): Pr
 export async function updateTestimonial(db: D1Database, id: number, t: TestimonialInput): Promise<boolean> {
   const r = await db
     .prepare(
-      `UPDATE testimonials SET name = ?, quote = ?, rating = ?, image_id = ?, sort_order = ?, status = ?,
+      `UPDATE testimonials SET name = ?, role = ?, location = ?, event_type = ?, event_detail = ?, quote = ?, rating = ?, image_id = ?, sort_order = ?, status = ?,
          updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
        WHERE id = ?`,
     )
-    .bind(t.name, t.quote, t.rating, t.image_id, t.sort_order, t.status, id)
+    .bind(t.name, t.role, t.location, t.event_type, t.event_detail, t.quote, t.rating, t.image_id, t.sort_order, t.status, id)
     .run()
   return changed(r)
 }
