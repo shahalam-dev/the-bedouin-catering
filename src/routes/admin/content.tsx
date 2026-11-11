@@ -3,6 +3,7 @@ import { Hono, type Context } from 'hono'
 import type { z } from 'zod'
 import { createBranch, getBranchById, listBranches, updateBranch, type Branch } from '../../db/branches'
 import { createClient, getClientById, listClients, updateClient } from '../../db/clients'
+import { createGalleryItem, getGalleryItemById, listGallery, updateGalleryItem } from '../../db/gallery'
 import { createCuisine, getCuisineById, listCuisines, updateCuisine, type Cuisine } from '../../db/cuisines'
 import { listMedia, type Media, type MediaFolder } from '../../db/media'
 import { createMenuItem, getMenuItemById, listMenuItems, updateMenuItem } from '../../db/menu_items'
@@ -18,6 +19,7 @@ import {
   branchSchema,
   clientSchema,
   cuisineSchema,
+  galleryItemSchema,
   menuItemSchema,
   IMAGE_TYPES,
   occasionSchema,
@@ -32,13 +34,13 @@ import { StatusPill } from '../../views/components/StatusPill'
 // its schema, form fields and db functions. Validation lives in the zod schemas.
 
 type Kind = 'text' | 'slug' | 'textarea' | 'int' | 'price' | 'lines' | 'checkbox' | 'status' | 'branch' | 'cuisine' | 'rating' | 'upload'
-type Field = { name: string; kind: Kind; required?: boolean }
+type Field = { name: string; kind: Kind; required?: boolean; /** Overrides adminT.fields[name]. */ label?: string }
 type Row = { id: number; name: string; status: Status } & Record<string, unknown>
 type Values = Record<string, string>
 type Errors = Record<string, string>
 type Options = { branches: Branch[]; cuisines: Cuisine[]; media: Media[] }
 
-export type Section = 'packages' | 'menu' | 'occasions' | 'clients' | 'testimonials' | 'branches' | 'cuisines'
+export type Section = 'packages' | 'menu' | 'occasions' | 'gallery' | 'clients' | 'testimonials' | 'branches' | 'cuisines'
 
 type Resource = {
   key: Section
@@ -141,6 +143,23 @@ export const resources: Resource[] = [
     update: updateOccasion,
   }),
   define({
+    key: 'gallery',
+    schema: galleryItemSchema,
+    uploadFolder: 'gallery',
+    fields: [
+      { name: 'name', kind: 'text', required: true, label: adminT.fields.title },
+      { name: 'event_type', kind: 'text', required: true },
+      { name: 'caption', kind: 'text' },
+      { name: 'is_tall', kind: 'checkbox' },
+      ...meta,
+    ],
+    list: listGallery,
+    get: getGalleryItemById,
+    create: createGalleryItem,
+    update: updateGalleryItem,
+    summary: (g) => [g.event_type, g.caption, g.is_tall && adminT.tall].filter(Boolean).join(' · '),
+  }),
+  define({
     key: 'clients',
     schema: clientSchema,
     uploadFolder: 'clients',
@@ -233,7 +252,7 @@ const NEW_DEFAULTS: Values = { status: 'draft', sort_order: '0', rating: '5' }
 
 const Control = ({ f, value, error, options }: { f: Field; value: string; error?: string; options: Options }) => {
   const id = f.name
-  const label = adminT.fields[f.name] ?? f.name
+  const label = f.label ?? adminT.fields[f.name] ?? f.name
   const common = { id, name: id, class: 'input', required: f.required, ...fieldAria(id, error) }
 
   if (f.kind === 'checkbox') {
