@@ -40,7 +40,7 @@ beforeEach(async () => {
     db.prepare('DELETE FROM branches'),
     db.prepare('DELETE FROM cuisines'),
   ])
-  const branchId = await createBranch(db, { slug: 'a', name: 'Branch A', address: null, phone: null, image_id: null, sort_order: 0, status: 'published' })
+  const branchId = await createBranch(db, { slug: 'a', name: 'Branch A', name_bm: null, address: null, phone: null, image_id: null, sort_order: 0, status: 'published' })
   const cuisineId = await createCuisine(db, { slug: 'arab', name: 'Arab', name_bm: null, description: null, description_bm: null, image_id: null, sort_order: 0, status: 'published' })
   const pkg = { branch_id: branchId, cuisine_id: cuisineId, description: null, price_sen: 3500, min_pax: 50, inclusions: [], is_popular: false, image_id: null, sort_order: 0 }
   packageId = await createPackage(db, { ...pkg, slug: 'p1', name: 'P1', status: 'published' })

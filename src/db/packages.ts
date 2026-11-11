@@ -22,6 +22,7 @@ export type Package = {
 export type PackageWithNames = Package & WithImage & {
   branch_name: string
   branch_slug: string
+  branch_name_bm: string | null
   cuisine_name: string
   cuisine_name_bm: string | null
   cuisine_slug: string
@@ -36,7 +37,7 @@ function fromRow<T extends Package>(r: Row<T>): T {
 }
 
 const SELECT_WITH_NAMES = `
-  SELECT p.*, b.name AS branch_name, b.slug AS branch_slug, c.name AS cuisine_name, c.name_bm AS cuisine_name_bm, c.slug AS cuisine_slug,
+  SELECT p.*, b.name AS branch_name, b.name_bm AS branch_name_bm, b.slug AS branch_slug, c.name AS cuisine_name, c.name_bm AS cuisine_name_bm, c.slug AS cuisine_slug,
     m.r2_key AS image_key, m.alt AS image_alt
   FROM packages p
   JOIN branches b ON b.id = p.branch_id

@@ -1,9 +1,11 @@
+import type { Lang } from '../lib/i18n'
 import { changed, type Status, type WithImage } from './shared'
 
 export type Branch = {
   id: number
   slug: string
   name: string
+  name_bm: string | null
   address: string | null
   phone: string | null
   image_id: number | null
@@ -14,6 +16,9 @@ export type Branch = {
 }
 
 export type BranchInput = Omit<Branch, 'id' | 'created_at' | 'updated_at'>
+
+/** Name in the visitor's language; BM falls back to English when not filled in. */
+export const branchInLang = <T extends Branch>(b: T, lang: Lang): T => (lang === 'bm' ? { ...b, name: b.name_bm || b.name } : b)
 
 export async function listPublishedBranches(db: D1Database): Promise<(Branch & WithImage)[]> {
   const { results } = await db
@@ -45,10 +50,10 @@ export function getPublishedBranchBySlug(db: D1Database, slug: string): Promise<
 export async function createBranch(db: D1Database, b: BranchInput): Promise<number> {
   const row = await db
     .prepare(
-      `INSERT INTO branches (slug, name, address, phone, image_id, sort_order, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+      `INSERT INTO branches (slug, name, name_bm, address, phone, image_id, sort_order, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
     )
-    .bind(b.slug, b.name, b.address, b.phone, b.image_id, b.sort_order, b.status)
+    .bind(b.slug, b.name, b.name_bm, b.address, b.phone, b.image_id, b.sort_order, b.status)
     .first<{ id: number }>()
   return row!.id
 }
@@ -56,11 +61,11 @@ export async function createBranch(db: D1Database, b: BranchInput): Promise<numb
 export async function updateBranch(db: D1Database, id: number, b: BranchInput): Promise<boolean> {
   const r = await db
     .prepare(
-      `UPDATE branches SET slug = ?, name = ?, address = ?, phone = ?, image_id = ?, sort_order = ?, status = ?,
+      `UPDATE branches SET slug = ?, name = ?, name_bm = ?, address = ?, phone = ?, image_id = ?, sort_order = ?, status = ?,
          updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
        WHERE id = ?`,
     )
-    .bind(b.slug, b.name, b.address, b.phone, b.image_id, b.sort_order, b.status, id)
+    .bind(b.slug, b.name, b.name_bm, b.address, b.phone, b.image_id, b.sort_order, b.status, id)
     .run()
   return changed(r)
 }

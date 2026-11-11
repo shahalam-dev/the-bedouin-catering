@@ -15,7 +15,7 @@ export const PackageCard = ({ pkg }: { pkg: PackageWithNames }) => {
         <h3>{pkg.name}</h3>
         <ul class="chips" aria-label={`${t.packages.steps.cuisine}, ${t.packages.steps.branch}`}>
           <li class="chip">{(lang === 'bm' && pkg.cuisine_name_bm) || pkg.cuisine_name}</li>
-          <li class="chip">{pkg.branch_name}</li>
+          <li class="chip">{(lang === 'bm' && pkg.branch_name_bm) || pkg.branch_name}</li>
         </ul>
         <p class="price">
           {formatRM(pkg.price_sen)} <span class="price__unit">{t.perPax}</span>
