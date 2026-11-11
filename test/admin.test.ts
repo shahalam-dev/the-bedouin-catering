@@ -320,6 +320,32 @@ describe('menu item editor', () => {
   })
 })
 
+describe('package editor', () => {
+  it('saves BM copy, uploads into the packages folder, shows BM name and inclusions publicly', async () => {
+    const fd = new FormData()
+    const png = new File([Uint8Array.from(atob(PNG_B64), (ch) => ch.charCodeAt(0))], 'p.png', { type: 'image/png' })
+    const fields = {
+      name: 'Kambing Golek', name_bm: 'Kambing Golek Istimewa', slug: 'kg', branch_id: String(branchId), cuisine_id: String(cuisineId),
+      price_sen: '35', min_pax: '50', inclusions: 'Rice\nDrinks', inclusions_bm: 'Nasi\nMinuman', description: '', description_bm: '',
+      sort_order: '0', status: 'published', image_id: '', image_alt: 'Whole roasted lamb', image_file: png,
+    }
+    for (const [k, v] of Object.entries(fields)) fd.set(k, v)
+    expect((await post('/admin/packages/new', fd)).status).toBe(303)
+
+    const [p] = await listPackages(db)
+    const [m] = await listMedia(db)
+    expect(m).toMatchObject({ folder: 'packages', alt: 'Whole roasted lamb' })
+    expect(p).toMatchObject({ name_bm: 'Kambing Golek Istimewa', inclusions_bm: ['Nasi', 'Minuman'], image_id: m.id })
+
+    const bm = await (await app.request('/packages?branch=shah-alam&cuisine=arab&lang=bm', {}, env)).text()
+    expect(bm).toContain('Kambing Golek Istimewa')
+    expect(bm).toContain('Minuman')
+    const en = await (await app.request('/packages?branch=shah-alam&cuisine=arab', {}, env)).text()
+    expect(en).not.toContain('Istimewa')
+    expect(en).toContain('Drinks')
+  })
+})
+
 describe('enquiries', () => {
   it('lists enquiries by status and updates a status', async () => {
     const id = await createEnquiry(db, { name: 'Aisha', phone: '+60 12-345 6789', email: null, event_date: null, pax: 80, branch_id: branchId, cuisine_id: null, package_id: null, message: 'Hi' })
@@ -367,8 +393,9 @@ describe('image upload', () => {
     expect(m.size_bytes).toBe(bytes.length)
     expect(new TextDecoder().decode(bytes.slice(8, 12))).toBe('WEBP')
 
-    // The image shows up in the package form's image picker.
-    expect(await (await get('/admin/packages/new')).text()).toContain('Lamb mandi on a platter (Menu)')
+    // The image shows up in the menu form's picker (its folder), not in other sections.
+    expect(await (await get('/admin/menu/new')).text()).toContain('Lamb mandi on a platter')
+    expect(await (await get('/admin/packages/new')).text()).not.toContain('Lamb mandi on a platter')
   })
 
   it('requires alt text and an allowed image type', async () => {

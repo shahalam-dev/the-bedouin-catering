@@ -1,12 +1,13 @@
-import type { PackageWithNames } from '../../db/packages'
+import { packageInLang, type PackageWithNames } from '../../db/packages'
 import { formatRM } from '../../lib/format'
 import { useI18n, withLang } from '../../lib/i18n'
 import { Button } from './Button'
 import { CheckIcon } from './Icons'
 import { Photo } from './Photo'
 
-export const PackageCard = ({ pkg }: { pkg: PackageWithNames }) => {
+export const PackageCard = ({ pkg: raw }: { pkg: PackageWithNames }) => {
   const { lang, t } = useI18n()
+  const pkg = packageInLang(raw, lang)
   return (
     <article class="card package-card">
       <Photo image={pkg} class="card__photo" />
