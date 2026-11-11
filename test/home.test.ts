@@ -15,7 +15,7 @@ beforeEach(async () => {
     db.prepare('DELETE FROM clients'),
     db.prepare("INSERT INTO occasions (slug, name, status) VALUES ('weddings', 'Weddings', 'published'), ('secret', 'Secret Party', 'draft')"),
     db.prepare(
-      "INSERT INTO testimonials (customer_name, event_type, quote, rating, status) VALUES ('Aisyah', 'Wedding', 'Lovely food', 4, 'published'), ('Hidden', NULL, 'Draft quote', 5, 'draft')",
+      "INSERT INTO testimonials (name, event_type, quote, rating, status) VALUES ('Aisyah', 'Wedding', 'Lovely food', 4, 'published'), ('Hidden', NULL, 'Draft quote', 5, 'draft')",
     ),
   ])
 })
@@ -30,6 +30,17 @@ describe('home page', () => {
     expect(html).toContain('4 out of 5 stars')
     expect(html).not.toContain('Secret Party')
     expect(html).not.toContain('Draft quote')
+  })
+
+  it('shows testimonials as a looping carousel right above the team section', async () => {
+    const html = await (await app.request('/', {}, env)).text()
+    const section = html.slice(html.indexOf('class="section testimonials"'), html.indexOf('class="section team"'))
+    expect(html.indexOf('cta-band')).toBeLessThan(html.indexOf('class="section testimonials"'))
+    expect(section).toContain('testimonials__track')
+    // One published item fills both halves (6 cards each); only the first card is exposed to screen readers.
+    expect(section.match(/Lovely food/g)?.length).toBe(12)
+    expect(section.match(/<ul aria-hidden="true">/g)?.length).toBe(1)
+    expect(section.match(/<li aria-hidden="true">/g)?.length).toBe(5)
   })
 
   it('renders BM strings and hides empty sections', async () => {

@@ -71,7 +71,7 @@ const imageFile = z
 const alt = z.string().trim().min(3).max(300)
 
 export const mediaUploadSchema = z.object({
-  folder: z.enum(['packages', 'menu', 'gallery', 'cuisines', 'branches', 'occasions', 'clients']),
+  folder: z.enum(['packages', 'menu', 'gallery', 'cuisines', 'branches', 'occasions', 'clients', 'testimonials']),
   alt,
   file: imageFile,
 })
@@ -102,6 +102,15 @@ export const clientSchema = z
   .object({ ...common, ...imageUpload })
   .refine(altNeeded, { path: ['image_alt'] })
   .refine((v) => v.image_file || v.image_id, { path: ['image_file'] })
+
+export const testimonialSchema = z
+  .object({
+    ...common,
+    ...imageUpload,
+    quote: z.string().trim().min(1).max(1000),
+    rating: z.coerce.number().int().min(1).max(5),
+  })
+  .refine(altNeeded, { path: ['image_alt'] })
 
 export const menuItemSchema = z
   .object({

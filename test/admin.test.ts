@@ -30,6 +30,7 @@ beforeEach(async () => {
     db.prepare('DELETE FROM menu_items'),
     db.prepare('DELETE FROM occasions'),
     db.prepare('DELETE FROM clients'),
+    db.prepare('DELETE FROM testimonials'),
     db.prepare('DELETE FROM branches'),
     db.prepare('DELETE FROM cuisines'),
     db.prepare('DELETE FROM media'),
@@ -313,6 +314,29 @@ describe('client editor', () => {
 
     const html = await (await app.request('/clients', {}, env)).text()
     expect(html).toContain('alt="Petronas logo"')
+    expect(html).toContain(`/img/thumb/${m.r2_key}`)
+  })
+})
+
+describe('testimonial editor', () => {
+  it('needs a quote and a 1-5 rating, uploads the photo into testimonials, shows it on home', async () => {
+    const fd = new FormData()
+    for (const [k, v] of Object.entries({ name: 'Aisyah', quote: '', rating: '6', sort_order: '0', status: 'published', image_id: '', image_alt: '' })) fd.set(k, v)
+    expect((await post('/admin/testimonials/new', fd)).status).toBe(400)
+
+    fd.set('quote', 'Best mandi in town')
+    fd.set('rating', '5')
+    fd.set('image_file', new File([Uint8Array.from(atob(PNG_B64), (ch) => ch.charCodeAt(0))], 'me.png', { type: 'image/png' }))
+    fd.set('image_alt', 'Aisyah smiling')
+    expect((await post('/admin/testimonials/new', fd)).status).toBe(303)
+
+    const [m] = (await listMedia(db)).filter((x) => x.folder === 'testimonials')
+    expect(m.r2_key).toMatch(/^testimonials\//)
+    expect(await db.prepare('SELECT * FROM testimonials').first()).toMatchObject({ name: 'Aisyah', quote: 'Best mandi in town', rating: 5, image_id: m.id })
+
+    const html = await (await app.request('/', {}, env)).text()
+    expect(html).toContain('Best mandi in town')
+    expect(html).toContain('alt="Aisyah smiling"')
     expect(html).toContain(`/img/thumb/${m.r2_key}`)
   })
 })

@@ -5,6 +5,7 @@ import { listPublishedPackages, type PackageWithNames } from '../../db/packages'
 import { inLang, type WithImage } from '../../db/shared'
 import { listPublishedTestimonials, type Testimonial } from '../../db/testimonials'
 import { HERO_VIDEO } from '../../lib/hero'
+import { imgUrl } from '../../lib/images'
 import { useI18n, withLang } from '../../lib/i18n'
 import { TEAM } from '../../lib/team'
 import { Button } from '../../views/components/Button'
@@ -28,7 +29,7 @@ const OccasionStrip = ({ occasions }: { occasions: Occasion[] }) => {
   )
 }
 
-const TestimonialCard = ({ item }: { item: Testimonial }) => {
+const TestimonialCard = ({ item }: { item: Testimonial & WithImage }) => {
   const { t } = useI18n()
   return (
     <figure class="card testimonial-card">
@@ -41,10 +42,49 @@ const TestimonialCard = ({ item }: { item: Testimonial }) => {
         <p>{item.quote}</p>
       </blockquote>
       <figcaption>
-        <span class="testimonial-card__name">{item.customer_name}</span>
-        {item.event_type && <span class="caption">{item.event_type}</span>}
+        {item.image_key && (
+          <img class="testimonial-card__photo" src={imgUrl(item.image_key, 'thumb')} alt={item.image_alt ?? ''} width="56" height="56" loading="lazy" decoding="async" />
+        )}
+        <span>
+          <span class="testimonial-card__name">{item.name}</span>
+          {item.event_type && <span class="caption">{item.event_type}</span>}
+        </span>
       </figcaption>
     </figure>
+  )
+}
+
+// Each half of the marquee track repeats the list until it has this many cards, so a short
+// list still fills the screen without a gap.
+const MIN_TRACK_CARDS = 6
+
+const Testimonials = ({ items }: { items: (Testimonial & WithImage)[] }) => {
+  const { t } = useI18n()
+  const copies = Math.ceil(MIN_TRACK_CARDS / items.length)
+  const half = (hidden: boolean) => (
+    <ul aria-hidden={hidden ? 'true' : undefined}>
+      {Array.from({ length: copies }, (_, i) =>
+        items.map((item) => (
+          // Repeats are for the loop only; screen readers hear each testimonial once.
+          <li aria-hidden={!hidden && i > 0 ? 'true' : undefined}>
+            <TestimonialCard item={item} />
+          </li>
+        )),
+      )}
+    </ul>
+  )
+  return (
+    <section class="section testimonials">
+      <div class="container">
+        <SectionTitle as="h2" title={t.home.testimonialsTitle} />
+      </div>
+      <div class="testimonials__viewport">
+        <div class="testimonials__track" style={`--marquee-duration: ${copies * items.length * 8}s`}>
+          {half(false)}
+          {half(true)}
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -82,7 +122,7 @@ const TeamSection = () => {
 // The rest are on /clients.
 const HOME_CLIENTS = 8
 
-type Props = { clients: (Client & WithImage)[]; occasions: Occasion[]; packages: PackageWithNames[]; testimonials: Testimonial[] }
+type Props = { clients: (Client & WithImage)[]; occasions: Occasion[]; packages: PackageWithNames[]; testimonials: (Testimonial & WithImage)[] }
 
 const HomePage = ({ clients, occasions, packages, testimonials }: Props) => {
   const { lang, t } = useI18n()
@@ -138,19 +178,6 @@ const HomePage = ({ clients, occasions, packages, testimonials }: Props) => {
         </section>
       )}
 
-      {testimonials.length > 0 && (
-        <section class="section testimonials">
-          <div class="container">
-            <SectionTitle as="h2" title={t.home.testimonialsTitle} />
-            <div class="card-grid">
-              {testimonials.map((item) => (
-                <TestimonialCard item={item} />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
       <section class="section cta-band on-dark">
         <div class="container">
           <h2>{t.occasions.cta}</h2>
@@ -159,6 +186,8 @@ const HomePage = ({ clients, occasions, packages, testimonials }: Props) => {
           </Button>
         </div>
       </section>
+
+      {testimonials.length > 0 && <Testimonials items={testimonials} />}
 
       <TeamSection />
     </>
@@ -176,7 +205,7 @@ home.get('/', async (c) => {
     listPublishedTestimonials(db),
   ])
   return c.render(
-    <HomePage clients={clients} occasions={occasions} packages={packages.slice(0, 3)} testimonials={testimonials.slice(0, 3)} />,
+    <HomePage clients={clients} occasions={occasions} packages={packages.slice(0, 3)} testimonials={testimonials} />,
   )
 })
 
