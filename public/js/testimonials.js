@@ -13,6 +13,15 @@ for (const root of document.querySelectorAll('[data-testimonials]')) {
     slides[i].hidden = false
     items[i]?.setAttribute('aria-current', 'true')
     cur = i
+    // Keep the active name visible in the scrollable list without scrolling the page.
+    const item = items[i]
+    if (item) {
+      const list = item.closest('ul')
+      const top = item.offsetTop - list.offsetTop
+      if (top < list.scrollTop || top + item.offsetHeight > list.scrollTop + list.clientHeight) {
+        list.scrollTo({ top: top - list.clientHeight / 2 + item.offsetHeight / 2, behavior: 'smooth' })
+      }
+    }
   }
 
   root.addEventListener('click', (e) => {

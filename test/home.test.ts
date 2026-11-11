@@ -34,8 +34,10 @@ describe('home page', () => {
     expect(html).not.toContain('Draft quote')
   })
 
-  it('shows testimonials as a list plus one quote panel, switchable via ?t= without JS', async () => {
-    await db.prepare("INSERT INTO testimonials (name, role, location, event_type, event_detail, quote, rating, status) VALUES ('Daniel Lim', 'HR Manager', 'Petaling Jaya', 'Corporate', 'Annual dinner · 300 guests', 'Great service', 5, 'published')").run()
+  it('shows testimonials as a list plus one quote panel, switchable via ?t=<id> without JS', async () => {
+    const { meta } = await db
+      .prepare("INSERT INTO testimonials (name, role, location, event_type, event_detail, quote, rating, status) VALUES ('Daniel Lim', 'HR Manager', 'Petaling Jaya', 'Corporate', 'Annual dinner · 300 guests', 'Great service', 5, 'published')")
+      .run()
     const html = await (await app.request('/', {}, env)).text()
     const section = html.slice(html.indexOf('class="section testimonials"'), html.indexOf('class="section team"'))
     expect(html.indexOf('cta-band')).toBeLessThan(html.indexOf('class="section testimonials"'))
@@ -49,11 +51,26 @@ describe('home page', () => {
     expect(section.match(/class="testimonials__slide"( hidden="")?/g)).toEqual(['class="testimonials__slide"', 'class="testimonials__slide" hidden=""'])
     expect(section.match(/aria-current="true"/g)?.length).toBe(1)
     expect(section).toContain('01 / 02')
+    expect(section).toContain(`href="/?t=${meta.last_row_id}#testimonials"`)
 
-    const second = await (await app.request('/?t=1', {}, env)).text()
-    expect(second).toMatch(/class="testimonials__slide" hidden="">.*Lovely food/s)
-    expect(second).toContain('02 / 02')
-    expect((await (await app.request('/?t=99', {}, env)).text())).toContain('01 / 02') // out of range falls back
+    // The requested testimonial is always shown first, whatever the random order.
+    for (let i = 0; i < 5; i++) {
+      const picked = await (await app.request(`/?t=${meta.last_row_id}`, {}, env)).text()
+      expect(picked).toMatch(/class="testimonials__slide">(?:(?!hidden).)*?Great service/s)
+    }
+    expect(await (await app.request('/?t=abc', {}, env)).text()).toContain('01 / 02') // junk param is ignored
+  })
+
+  it('shows at most 10 random published testimonials', async () => {
+    await db.batch(
+      Array.from({ length: 14 }, (_, i) =>
+        db.prepare("INSERT INTO testimonials (name, quote, rating, status) VALUES (?, ?, 5, 'published')").bind(`Guest ${i}`, `Quote ${i}`),
+      ),
+    )
+    const html = await (await app.request('/', {}, env)).text()
+    expect(html.match(/class="testimonials__item"/g)?.length).toBe(10)
+    expect(html).toContain('01 / 10')
+    expect(html).toContain('Average from 15 reviews') // all 15 published (14 + Aisyah), not just the 10 shown
   })
 
   it('renders BM strings and hides empty sections', async () => {

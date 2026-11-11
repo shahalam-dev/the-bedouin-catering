@@ -869,8 +869,11 @@ textarea.input {
 .testimonials__list {
   display: grid;
   gap: var(--space-2);
+  max-height: 352px; /* about 4.5 rows, so a cut-off row hints at scrolling */
   margin: 0;
-  padding: 0;
+  padding: var(--space-1); /* room for the active card's shadow and focus ring */
+  overflow-y: auto;
+  overscroll-behavior: contain;
   list-style: none;
 }
 .testimonials__item {
