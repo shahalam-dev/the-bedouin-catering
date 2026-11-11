@@ -1,7 +1,7 @@
 import { Hono, type Context } from 'hono'
 import { branchInLang, listPublishedBranches, type Branch } from '../../db/branches'
 import { listPublishedCuisines, type Cuisine } from '../../db/cuisines'
-import { listPublishedPackages, type PackageWithNames } from '../../db/packages'
+import { listPublishedPackages, packageInLang, type PackageWithNames } from '../../db/packages'
 import { inLang } from '../../db/shared'
 import { formatRM } from '../../lib/format'
 import { useI18n, withLang } from '../../lib/i18n'
@@ -84,7 +84,7 @@ const ContactPage = ({ options, values = {}, errors = [], formError, sent, siteK
                 'package_id',
                 options.packages.map((p) => ({
                   id: p.id,
-                  label: `${p.name} (${(lang === 'bm' && p.branch_name_bm) || p.branch_name}, ${(lang === 'bm' && p.cuisine_name_bm) || p.cuisine_name}) ${formatRM(p.price_sen)} ${t.perPax}`,
+                  label: `${packageInLang(p, lang).name} (${(lang === 'bm' && p.branch_name_bm) || p.branch_name}, ${(lang === 'bm' && p.cuisine_name_bm) || p.cuisine_name}) ${formatRM(p.price_sen)} ${t.perPax}`,
                 })),
               )}
             </div>

@@ -279,6 +279,7 @@ export const adminT = {
     price_sen: 'Price per pax (RM)',
     min_pax: 'Minimum pax',
     inclusions: 'Inclusions (one per line)',
+    inclusions_bm: 'Inclusions in Bahasa Malaysia (optional, one per line)',
     is_popular: 'Mark as Popular',
     category: 'Category',
     is_bestseller: 'Bestseller',

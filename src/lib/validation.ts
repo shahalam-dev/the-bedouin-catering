@@ -52,17 +52,6 @@ const lines = z
 const common = { name, sort_order: sortOrder, status, image_id: optional(id) }
 
 
-export const packageSchema = z.object({
-  ...common,
-  slug,
-  branch_id: id,
-  cuisine_id: id,
-  description: text(1000),
-  price_sen: price,
-  min_pax: z.coerce.number().int().min(1).max(10_000),
-  inclusions: lines,
-  is_popular: checkbox,
-})
 
 
 export const enquiryStatusSchema = z.object({
@@ -121,5 +110,23 @@ export const menuItemSchema = z
     category: text(60),
     price_sen: optional(price),
     is_bestseller: checkbox,
+  })
+  .refine(altNeeded, { path: ['image_alt'] })
+
+export const packageSchema = z
+  .object({
+    ...common,
+    ...imageUpload,
+    slug,
+    name_bm: text(120),
+    branch_id: id,
+    cuisine_id: id,
+    description: text(1000),
+    description_bm: text(1000),
+    price_sen: price,
+    min_pax: z.coerce.number().int().min(1).max(10_000),
+    inclusions: lines,
+    inclusions_bm: z.preprocess((v) => v ?? '', lines),
+    is_popular: checkbox,
   })
   .refine(altNeeded, { path: ['image_alt'] })

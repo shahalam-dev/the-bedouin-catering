@@ -27,7 +27,7 @@ import { StatusPill } from '../../views/components/StatusPill'
 // One editor for every "content" table. Each table is described by a Resource below:
 // its schema, form fields and db functions. Validation lives in the zod schemas.
 
-type Kind = 'text' | 'slug' | 'textarea' | 'int' | 'price' | 'lines' | 'checkbox' | 'status' | 'branch' | 'cuisine' | 'image' | 'upload'
+type Kind = 'text' | 'slug' | 'textarea' | 'int' | 'price' | 'lines' | 'checkbox' | 'status' | 'branch' | 'cuisine' | 'upload'
 type Field = { name: string; kind: Kind; required?: boolean }
 type Row = { id: number; name: string; status: Status } & Record<string, unknown>
 type Values = Record<string, string>
@@ -40,8 +40,8 @@ type Resource = {
   key: Section
   schema: z.ZodType<Record<string, unknown>>
   fields: Field[]
-  /** With an 'upload' field: the media folder new images go to. */
-  uploadFolder?: MediaFolder
+  /** The media folder new images go to, and the only one the picker shows. */
+  uploadFolder: MediaFolder
   list(db: D1Database): Promise<Row[]>
   get(db: D1Database, id: number): Promise<Row | null>
   create(db: D1Database, input: Record<string, unknown>): Promise<number>
@@ -55,7 +55,7 @@ function define<S extends z.ZodType, R extends { id: number; name: string; statu
   key: Section
   schema: S
   fields: Field[]
-  uploadFolder?: MediaFolder
+  uploadFolder: MediaFolder
   list(db: D1Database): Promise<L[]>
   get(db: D1Database, id: number): Promise<R | null>
   create(db: D1Database, input: z.output<S>): Promise<number>
@@ -65,25 +65,30 @@ function define<S extends z.ZodType, R extends { id: number; name: string; statu
   return r as unknown as Resource
 }
 
+// Image last: the upload box and library picker sit at the bottom of the form.
 const meta: Field[] = [
-  { name: 'image_id', kind: 'image' },
   { name: 'sort_order', kind: 'int' },
   { name: 'status', kind: 'status' },
+  { name: 'image_id', kind: 'upload' },
 ]
 
 export const resources: Resource[] = [
   define({
     key: 'packages',
     schema: packageSchema,
+    uploadFolder: 'packages',
     fields: [
       { name: 'name', kind: 'text', required: true },
+      { name: 'name_bm', kind: 'text' },
       { name: 'slug', kind: 'slug', required: true },
       { name: 'branch_id', kind: 'branch', required: true },
       { name: 'cuisine_id', kind: 'cuisine', required: true },
       { name: 'price_sen', kind: 'price', required: true },
       { name: 'min_pax', kind: 'int', required: true },
       { name: 'inclusions', kind: 'lines' },
+      { name: 'inclusions_bm', kind: 'lines' },
       { name: 'description', kind: 'textarea' },
+      { name: 'description_bm', kind: 'textarea' },
       { name: 'is_popular', kind: 'checkbox' },
       ...meta,
     ],
@@ -106,9 +111,7 @@ export const resources: Resource[] = [
       { name: 'description', kind: 'textarea' },
       { name: 'description_bm', kind: 'textarea' },
       { name: 'is_bestseller', kind: 'checkbox' },
-      { name: 'sort_order', kind: 'int' },
-      { name: 'status', kind: 'status' },
-      { name: 'image_id', kind: 'upload' },
+      ...meta,
     ],
     list: listMenuItems,
     get: getMenuItemById,
@@ -126,9 +129,7 @@ export const resources: Resource[] = [
       { name: 'slug', kind: 'slug', required: true },
       { name: 'description', kind: 'textarea' },
       { name: 'description_bm', kind: 'textarea' },
-      { name: 'sort_order', kind: 'int' },
-      { name: 'status', kind: 'status' },
-      { name: 'image_id', kind: 'upload' },
+      ...meta,
     ],
     list: listOccasions,
     get: getOccasionById,
@@ -145,9 +146,7 @@ export const resources: Resource[] = [
       { name: 'slug', kind: 'slug', required: true },
       { name: 'address', kind: 'textarea' },
       { name: 'phone', kind: 'text' },
-      { name: 'sort_order', kind: 'int' },
-      { name: 'status', kind: 'status' },
-      { name: 'image_id', kind: 'upload' },
+      ...meta,
     ],
     list: listBranches,
     get: getBranchById,
@@ -164,9 +163,7 @@ export const resources: Resource[] = [
       { name: 'slug', kind: 'slug', required: true },
       { name: 'description', kind: 'textarea' },
       { name: 'description_bm', kind: 'textarea' },
-      { name: 'sort_order', kind: 'int' },
-      { name: 'status', kind: 'status' },
-      { name: 'image_id', kind: 'upload' },
+      ...meta,
     ],
     list: listCuisines,
     get: getCuisineById,
@@ -225,9 +222,7 @@ const Control = ({ f, value, error, options }: { f: Field; value: string; error?
         ? options.branches.map((b) => ({ id: String(b.id), label: b.name }))
         : f.kind === 'cuisine'
           ? options.cuisines.map((c) => ({ id: String(c.id), label: c.name }))
-          : f.kind === 'image'
-            ? options.media.map((m) => ({ id: String(m.id), label: `${m.alt} (${adminT.media.folders[m.folder]})` }))
-            : null
+          : null
 
   const control = choices ? (
     <select {...common}>
@@ -305,12 +300,7 @@ const FormPage = ({ r, values, errors, options, id }: FormProps) => {
       <div class="admin-head">
         <h1>{heading}</h1>
       </div>
-      <form
-        method="post"
-        class="panel form"
-        enctype={r.fields.some((f) => f.kind === 'upload') ? 'multipart/form-data' : undefined}
-        novalidate
-      >
+      <form method="post" class="panel form" enctype="multipart/form-data" novalidate>
         {Object.keys(errors).length > 0 && (
           <p class="notice notice--error" role="alert">
             {adminT.formError}
@@ -418,7 +408,7 @@ export function contentRoutes(r: Resource) {
   // Shows the form again if the upload fails or the slug is already in use. A falsy result means the row is gone.
   const save = async (c: Context<AdminEnv>, input: Record<string, unknown>, id?: number) => {
     const form = async () => (await c.req.parseBody()) as Values
-    if (r.uploadFolder && input.image_file instanceof File) {
+    if (input.image_file instanceof File) {
       const stored = await storeUpload(c.env, r.uploadFolder, input.image_file, String(input.image_alt))
       if (typeof stored === 'string') return renderForm(c, await form(), { image_file: adminT.media[stored] }, id)
       input.image_id = stored
