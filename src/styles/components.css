@@ -71,6 +71,7 @@
   font-weight: 500;
   line-height: 1;
   text-decoration: none;
+  white-space: nowrap;
 }
 .nav-links a:hover,
 .nav-links a[aria-current="page"] {
@@ -157,6 +158,22 @@
     flex: 1;
     justify-content: center;
   }
+}
+/* Seven links plus the quote button only just fit on small laptops: tighten the spacing there. */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .site-header__desktop,
+  .site-header__desktop .nav-links {
+    gap: var(--space-3);
+  }
+  .site-header__actions {
+    gap: var(--space-2);
+  }
+  .site-header__actions .btn {
+    padding-inline: var(--space-4);
+    white-space: nowrap;
+  }
+}
+@media (min-width: 1024px) {
   .mobile-menu {
     display: none;
   }

@@ -122,6 +122,7 @@ describe('card photos', () => {
     const filtered = await (await app.request('/?event=Corporate', {}, env)).text()
     expect(filtered).not.toContain('Garden Wedding')
     expect(filtered).toContain('Annual Dinner')
+    expect(html.match(/href="\/gallery"/g)?.length).toBe(4) // desktop + mobile nav, footer, "View Full Gallery"
     expect(filtered).toMatch(/aria-current="page">Corporate <span class="gallery-chip__count">\(1\)/)
     expect(filtered).toMatch(/All <span class="gallery-chip__count">\(2\)/)
   })

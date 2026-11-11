@@ -300,6 +300,14 @@ describe('occasion editor', () => {
 })
 
 describe('gallery editor', () => {
+  it('offers only event gallery folder images in the picker', async () => {
+    await createMedia(db, { r2_key: 'gallery/g.webp', folder: 'gallery', alt: 'Gallery photo', content_type: 'image/webp', size_bytes: 1, width: null, height: null })
+    await createMedia(db, { r2_key: 'clients/c.webp', folder: 'clients', alt: 'Client logo', content_type: 'image/webp', size_bytes: 1, width: null, height: null })
+    const html = await (await app.request('/admin/gallery/new', {}, devEnv)).text()
+    expect(html).toContain('Gallery photo')
+    expect(html).not.toContain('Client logo')
+  })
+
   it('requires a photo, uploads into the gallery folder, shows the card on home and /gallery', async () => {
     const fd = new FormData()
     for (const [k, v] of Object.entries({ name: 'Garden Wedding', event_type: 'Weddings', caption: 'Shah Alam · 600 pax', is_tall: 'on', sort_order: '0', status: 'published', image_id: '', image_alt: '' })) fd.set(k, v)

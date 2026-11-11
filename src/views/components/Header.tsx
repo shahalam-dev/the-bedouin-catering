@@ -7,6 +7,7 @@ const links = [
   { key: 'packages', path: '/packages' },
   { key: 'menu', path: '/menu' },
   { key: 'occasions', path: '/occasions' },
+  { key: 'gallery', path: '/gallery' },
   { key: 'clients', path: '/clients' },
   { key: 'contact', path: '/contact' },
 ] as const
