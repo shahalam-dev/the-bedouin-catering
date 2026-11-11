@@ -13,7 +13,7 @@ import { Button } from '../../views/components/Button'
 import { ClientLogos } from '../../views/components/ClientLogos'
 import { EventGallery } from '../../views/components/EventGallery'
 import { HeroVideo } from '../../views/components/HeroVideo'
-import { StarIcon } from '../../views/components/Icons'
+import { ChevronIcon, StarIcon } from '../../views/components/Icons'
 import { PackageCard } from '../../views/components/PackageCard'
 import { SectionTitle } from '../../views/components/SectionTitle'
 
@@ -31,61 +31,114 @@ const OccasionStrip = ({ occasions }: { occasions: Occasion[] }) => {
   )
 }
 
-const TestimonialCard = ({ item }: { item: Testimonial & WithImage }) => {
-  const { t } = useI18n()
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
+
+const Avatar = ({ item }: { item: Testimonial & WithImage }) =>
+  item.image_key ? (
+    <img class="t-avatar" src={imgUrl(item.image_key, 'thumb')} alt={item.image_alt ?? ''} width="56" height="56" loading="lazy" decoding="async" />
+  ) : (
+    <span class="t-avatar" aria-hidden="true">
+      {initials(item.name)}
+    </span>
+  )
+
+const Who = ({ item }: { item: Testimonial }) => {
+  const sub = [item.role, item.location].filter(Boolean).join(' · ')
   return (
-    <figure class="card testimonial-card">
-      <p class="testimonial-card__stars" role="img" aria-label={t.home.rating(item.rating)}>
-        {Array.from({ length: item.rating }, () => (
-          <StarIcon />
-        ))}
-      </p>
-      <blockquote>
-        <p>{item.quote}</p>
-      </blockquote>
-      <figcaption>
-        {item.image_key && (
-          <img class="testimonial-card__photo" src={imgUrl(item.image_key, 'thumb')} alt={item.image_alt ?? ''} width="56" height="56" loading="lazy" decoding="async" />
-        )}
-        <span>
-          <span class="testimonial-card__name">{item.name}</span>
-          {item.event_type && <span class="caption">{item.event_type}</span>}
-        </span>
-      </figcaption>
-    </figure>
+    <span class="testimonials__who">
+      <span class="testimonials__name">{item.name}</span>
+      {sub && <span class="testimonials__sub">{sub}</span>}
+    </span>
   )
 }
 
-// Each half of the marquee track repeats the list until it has this many cards, so a short
-// list still fills the screen without a gap.
-const MIN_TRACK_CARDS = 6
+const pad = (n: number) => String(n).padStart(2, '0')
 
-const Testimonials = ({ items }: { items: (Testimonial & WithImage)[] }) => {
-  const { t } = useI18n()
-  const copies = Math.ceil(MIN_TRACK_CARDS / items.length)
-  const half = (hidden: boolean) => (
-    <ul aria-hidden={hidden ? 'true' : undefined}>
-      {Array.from({ length: copies }, (_, i) =>
-        items.map((item) => (
-          // Repeats are for the loop only; screen readers hear each testimonial once.
-          <li aria-hidden={!hidden && i > 0 ? 'true' : undefined}>
-            <TestimonialCard item={item} />
-          </li>
-        )),
-      )}
-    </ul>
-  )
+// Works without JS: list and arrows are links to ?t=N. public/js/testimonials.js turns them into
+// in-page switches and auto-advances.
+const Testimonials = ({ items, active }: { items: (Testimonial & WithImage)[]; active: number }) => {
+  const { lang, t } = useI18n()
+  const n = items.length
+  const avg = Number((items.reduce((s, i) => s + i.rating, 0) / n).toFixed(1))
+  const href = (i: number) => `${withLang(`/?t=${(i + n) % n}`, lang)}#testimonials`
+  const [before, accent, after] = t.home.testimonialsTitle
   return (
-    <section class="section testimonials">
-      <div class="container">
-        <SectionTitle as="h2" title={t.home.testimonialsTitle} />
-      </div>
-      <div class="testimonials__viewport">
-        <div class="testimonials__track" style={`--marquee-duration: ${copies * items.length * 8}s`}>
-          {half(false)}
-          {half(true)}
+    <section class="section testimonials" id="testimonials" data-testimonials>
+      <div class="container testimonials__grid">
+        <div class="testimonials__intro">
+          <p class="testimonials__eyebrow">{t.home.testimonialsEyebrow}</p>
+          <h2>
+            {before}
+            <span class="testimonials__accent">{accent}</span>
+            {after}
+          </h2>
+          <p class="lead">{t.home.testimonialsLead}</p>
+          <div class="card testimonials__score">
+            <span class="testimonials__avg">{avg.toFixed(1)}</span>
+            <span>
+              <span class="testimonials__stars" role="img" aria-label={t.home.rating(avg)}>
+                {Array.from({ length: Math.round(avg) }, () => (
+                  <StarIcon />
+                ))}
+              </span>
+              <span class="caption">{t.home.reviewCount(n)}</span>
+            </span>
+          </div>
+          <ul class="testimonials__list">
+            {items.map((item, i) => (
+              <li>
+                <a class="testimonials__item" href={href(i)} data-t-go={i} aria-current={i === active ? 'true' : undefined}>
+                  <Avatar item={item} />
+                  <Who item={item} />
+                  {item.event_type && <span class="testimonials__pill">{item.event_type}</span>}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div class="testimonials__panel on-dark">
+          {items.map((item, i) => (
+            <figure class="testimonials__slide" hidden={i !== active}>
+              {(item.event_type || item.event_detail) && (
+                <p class="testimonials__event">
+                  {item.event_type && <span class="testimonials__tag">{item.event_type}</span>}
+                  {item.event_detail}
+                </p>
+              )}
+              <blockquote>
+                <p>“{item.quote}”</p>
+              </blockquote>
+              <div class="testimonials__foot">
+                <figcaption>
+                  <Avatar item={item} />
+                  <Who item={item} />
+                </figcaption>
+                {n > 1 && (
+                  <nav class="testimonials__nav" aria-label={t.home.testimonialsTitle.join('')}>
+                    <span class="testimonials__count">
+                      {pad(i + 1)} / {pad(n)}
+                    </span>
+                    <a class="testimonials__arrow" href={href(i - 1)} data-t-go="prev" aria-label={t.back}>
+                      <ChevronIcon dir="left" />
+                    </a>
+                    <a class="testimonials__arrow" href={href(i + 1)} data-t-go="next" aria-label={t.next}>
+                      <ChevronIcon dir="right" />
+                    </a>
+                  </nav>
+                )}
+              </div>
+            </figure>
+          ))}
         </div>
       </div>
+      <script src="/js/testimonials.js" defer />
     </section>
   )
 }
@@ -125,9 +178,9 @@ const TeamSection = () => {
 const HOME_CLIENTS = 8
 const HOME_GALLERY = 10
 
-type Props = { clients: (Client & WithImage)[]; gallery: (GalleryItem & WithImage)[]; event?: string; occasions: Occasion[]; packages: PackageWithNames[]; testimonials: (Testimonial & WithImage)[] }
+type Props = { clients: (Client & WithImage)[]; gallery: (GalleryItem & WithImage)[]; event?: string; occasions: Occasion[]; packages: PackageWithNames[]; testimonials: (Testimonial & WithImage)[]; activeTestimonial: number }
 
-const HomePage = ({ clients, gallery, event, occasions, packages, testimonials }: Props) => {
+const HomePage = ({ activeTestimonial, clients, gallery, event, occasions, packages, testimonials }: Props) => {
   const { lang, t } = useI18n()
   return (
     <>
@@ -204,7 +257,7 @@ const HomePage = ({ clients, gallery, event, occasions, packages, testimonials }
         </div>
       </section>
 
-      {testimonials.length > 0 && <Testimonials items={testimonials} />}
+      {testimonials.length > 0 && <Testimonials items={testimonials} active={activeTestimonial} />}
 
       <TeamSection />
     </>
@@ -222,8 +275,10 @@ home.get('/', async (c) => {
     listPublishedPackages(db), // already sorted popular first
     listPublishedTestimonials(db),
   ])
+  const t = Number(c.req.query('t'))
+  const activeTestimonial = Number.isInteger(t) && t >= 0 && t < testimonials.length ? t : 0
   return c.render(
-    <HomePage clients={clients} gallery={gallery} event={c.req.query('event')} occasions={occasions} packages={packages.slice(0, 3)} testimonials={testimonials} />,
+    <HomePage activeTestimonial={activeTestimonial} clients={clients} gallery={gallery} event={c.req.query('event')} occasions={occasions} packages={packages.slice(0, 3)} testimonials={testimonials} />,
   )
 })
 

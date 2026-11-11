@@ -360,11 +360,15 @@ describe('testimonial editor', () => {
     fd.set('rating', '5')
     fd.set('image_file', new File([Uint8Array.from(atob(PNG_B64), (ch) => ch.charCodeAt(0))], 'me.png', { type: 'image/png' }))
     fd.set('image_alt', 'Aisyah smiling')
+    fd.set('role', 'Bride')
+    fd.set('location', 'Shah Alam')
+    fd.set('event_type', 'Wedding')
+    fd.set('event_detail', 'Reception · 600 guests')
     expect((await post('/admin/testimonials/new', fd)).status).toBe(303)
 
     const [m] = (await listMedia(db)).filter((x) => x.folder === 'testimonials')
     expect(m.r2_key).toMatch(/^testimonials\//)
-    expect(await db.prepare('SELECT * FROM testimonials').first()).toMatchObject({ name: 'Aisyah', quote: 'Best mandi in town', rating: 5, image_id: m.id })
+    expect(await db.prepare('SELECT * FROM testimonials').first()).toMatchObject({ name: 'Aisyah', role: 'Bride', location: 'Shah Alam', event_type: 'Wedding', event_detail: 'Reception · 600 guests', quote: 'Best mandi in town', rating: 5, image_id: m.id })
 
     const html = await (await app.request('/', {}, env)).text()
     expect(html).toContain('Best mandi in town')
