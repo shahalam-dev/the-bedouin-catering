@@ -2,9 +2,10 @@ import { Hono } from 'hono'
 import { listPublishedOccasions, type Occasion } from '../../db/occasions'
 import { listPublishedPackages, type PackageWithNames } from '../../db/packages'
 import { listPublishedTestimonials, type Testimonial } from '../../db/testimonials'
+import { HERO_VIDEO } from '../../lib/hero'
 import { useI18n, withLang } from '../../lib/i18n'
 import { Button } from '../../views/components/Button'
-import { HERO_POSTER, HeroVideo } from '../../views/components/HeroVideo'
+import { HeroVideo } from '../../views/components/HeroVideo'
 import { StarIcon } from '../../views/components/Icons'
 import { PackageCard } from '../../views/components/PackageCard'
 import { SectionTitle } from '../../views/components/SectionTitle'
@@ -50,8 +51,8 @@ const HomePage = ({ occasions, packages, testimonials }: Props) => {
   return (
     <>
       <title>{`${t.home.title} | ${t.siteName}`}</title>
-      <link rel="preload" as="image" href={HERO_POSTER} />
-      <section class="hero on-dark">
+      <link rel="preload" as="image" href={HERO_VIDEO.poster} />
+      <section class="hero on-dark" style={`--hero-poster: url("${HERO_VIDEO.poster}")`}>
         <HeroVideo />
         <div class="container hero__inner">
           <h1 class="display">{t.home.heroTitle}</h1>

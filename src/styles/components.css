@@ -682,9 +682,10 @@ textarea.input {
     color-mix(in srgb, var(--ink) 75%, transparent)
   );
 }
-.hero--still { background-image: url("/video/hero2-poster.v1.webp"); }
+/* --hero-poster is set inline from HERO_VIDEO.poster (src/lib/hero.ts). */
+.hero--still { background-image: var(--hero-poster); }
 @media (prefers-reduced-motion: reduce) {
-  .hero { background-image: url("/video/hero2-poster.v1.webp"); }
+  .hero { background-image: var(--hero-poster); }
   .hero-video { display: none; }
 }
 .hero__inner {
