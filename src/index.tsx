@@ -9,9 +9,13 @@ import menu from './routes/public/menu'
 import { NotFoundPage } from './routes/public/not-found'
 import occasions from './routes/public/occasions'
 import packages from './routes/public/packages'
+import video from './routes/public/video'
 import { PublicLayout } from './views/layouts/PublicLayout'
 
 const app = new Hono<{ Bindings: Env }>()
+
+// First: byte-range responses for hero videos (static assets can't do 206).
+app.route('/video', video)
 
 app.use('*', PublicLayout)
 

@@ -4,6 +4,7 @@ import { listPublishedPackages, type PackageWithNames } from '../../db/packages'
 import { listPublishedTestimonials, type Testimonial } from '../../db/testimonials'
 import { useI18n, withLang } from '../../lib/i18n'
 import { Button } from '../../views/components/Button'
+import { HERO_POSTER, HeroVideo } from '../../views/components/HeroVideo'
 import { StarIcon } from '../../views/components/Icons'
 import { PackageCard } from '../../views/components/PackageCard'
 import { SectionTitle } from '../../views/components/SectionTitle'
@@ -49,8 +50,9 @@ const HomePage = ({ occasions, packages, testimonials }: Props) => {
   return (
     <>
       <title>{`${t.home.title} | ${t.siteName}`}</title>
-      {/* shortcut: plain dark hero until a hero photo is served from R2 via /media/:key */}
+      <link rel="preload" as="image" href={HERO_POSTER} />
       <section class="hero on-dark">
+        <HeroVideo />
         <div class="container hero__inner">
           <h1 class="display">{t.home.heroTitle}</h1>
           <p class="lead">{t.home.heroLead}</p>
