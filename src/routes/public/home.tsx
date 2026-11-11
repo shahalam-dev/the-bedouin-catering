@@ -1,12 +1,14 @@
 import { Hono } from 'hono'
+import { listPublishedClients, type Client } from '../../db/clients'
 import { listPublishedOccasions, type Occasion } from '../../db/occasions'
-import { inLang } from '../../db/shared'
+import { inLang, type WithImage } from '../../db/shared'
 import { listPublishedPackages, type PackageWithNames } from '../../db/packages'
 import { listPublishedTestimonials, type Testimonial } from '../../db/testimonials'
 import { HERO_VIDEO } from '../../lib/hero'
 import { TEAM } from '../../lib/team'
 import { useI18n, withLang } from '../../lib/i18n'
 import { Button } from '../../views/components/Button'
+import { ClientLogos } from '../../views/components/ClientLogos'
 import { HeroVideo } from '../../views/components/HeroVideo'
 import { StarIcon } from '../../views/components/Icons'
 import { PackageCard } from '../../views/components/PackageCard'
@@ -77,9 +79,12 @@ const TeamSection = () => {
   )
 }
 
-type Props = { occasions: Occasion[]; packages: PackageWithNames[]; testimonials: Testimonial[] }
+// The rest are on /clients.
+const HOME_CLIENTS = 8
 
-const HomePage = ({ occasions, packages, testimonials }: Props) => {
+type Props = { clients: (Client & WithImage)[]; occasions: Occasion[]; packages: PackageWithNames[]; testimonials: Testimonial[] }
+
+const HomePage = ({ clients, occasions, packages, testimonials }: Props) => {
   const { lang, t } = useI18n()
   return (
     <>
@@ -98,6 +103,20 @@ const HomePage = ({ occasions, packages, testimonials }: Props) => {
           </div>
         </div>
       </section>
+
+      {clients.length > 0 && (
+        <section class="section clients">
+          <div class="container">
+            <SectionTitle as="h2" title={t.clients.title} lead={t.clients.lead} />
+            <ClientLogos clients={clients} />
+            <div class="section__more">
+              <Button variant="outline" href={withLang('/clients', lang)}>
+                {t.clients.all}
+              </Button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {occasions.length > 0 && <OccasionStrip occasions={occasions} />}
 
@@ -150,13 +169,14 @@ const home = new Hono<{ Bindings: Env }>()
 
 home.get('/', async (c) => {
   const db = c.env.DB
-  const [occasions, packages, testimonials] = await Promise.all([
+  const [clients, occasions, packages, testimonials] = await Promise.all([
+    listPublishedClients(db, HOME_CLIENTS),
     listPublishedOccasions(db),
     listPublishedPackages(db), // already sorted popular first
     listPublishedTestimonials(db),
   ])
   return c.render(
-    <HomePage occasions={occasions} packages={packages.slice(0, 3)} testimonials={testimonials.slice(0, 3)} />,
+    <HomePage clients={clients} occasions={occasions} packages={packages.slice(0, 3)} testimonials={testimonials.slice(0, 3)} />,
   )
 })
 

@@ -12,6 +12,7 @@ beforeEach(async () => {
     db.prepare('DELETE FROM cuisines'),
     db.prepare('DELETE FROM occasions'),
     db.prepare('DELETE FROM testimonials'),
+    db.prepare('DELETE FROM clients'),
     db.prepare("INSERT INTO occasions (slug, name, status) VALUES ('weddings', 'Weddings', 'published'), ('secret', 'Secret Party', 'draft')"),
     db.prepare(
       "INSERT INTO testimonials (customer_name, event_type, quote, rating, status) VALUES ('Aisyah', 'Wedding', 'Lovely food', 4, 'published'), ('Hidden', NULL, 'Draft quote', 5, 'draft')",
@@ -43,6 +44,28 @@ describe('home page', () => {
     const tag = html.match(/<video[^>]*>/)?.[0] ?? ''
     for (const attr of ['autoplay', 'muted', 'loop', 'playsinline']) expect(tag).toMatch(new RegExp(` ${attr}=""`))
     expect(tag).not.toMatch(/ controls/)
+  })
+})
+
+describe('our clients', () => {
+  it('shows 8 published logos on home, all of them on /clients, and links to /clients in nav and footer', async () => {
+    const media = await db
+      .prepare("INSERT INTO media (r2_key, folder, alt, content_type, size_bytes) VALUES ('clients/x.webp', 'clients', 'Client logo', 'image/webp', 1) RETURNING id")
+      .first<{ id: number }>()
+    await db.batch([
+      ...Array.from({ length: 10 }, (_, i) =>
+        db.prepare("INSERT INTO clients (name, image_id, sort_order, status) VALUES (?, ?, ?, 'published')").bind(`C${i}`, media!.id, i),
+      ),
+      db.prepare("INSERT INTO clients (name, image_id, status) VALUES ('Draft Co', ?, 'draft')").bind(media!.id),
+      db.prepare("INSERT INTO clients (name, status) VALUES ('No Logo Co', 'published')"),
+    ])
+    const count = (html: string) => html.match(/clients\/x\.webp/g)?.length ?? 0
+
+    const home = await (await app.request('/', {}, env)).text()
+    expect(count(home)).toBe(8)
+    expect(home.indexOf('Our Clients')).toBeLessThan(home.indexOf('occasion-strip'))
+    expect(home.match(/href="\/clients"/g)?.length).toBe(4) // desktop + mobile nav, footer, "See all"
+    expect(count(await (await app.request('/clients', {}, env)).text())).toBe(10)
   })
 })
 

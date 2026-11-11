@@ -2,6 +2,7 @@ import { zValidator } from '@hono/zod-validator'
 import { Hono, type Context } from 'hono'
 import type { z } from 'zod'
 import { createBranch, getBranchById, listBranches, updateBranch, type Branch } from '../../db/branches'
+import { createClient, getClientById, listClients, updateClient } from '../../db/clients'
 import { createCuisine, getCuisineById, listCuisines, updateCuisine, type Cuisine } from '../../db/cuisines'
 import { listMedia, type Media, type MediaFolder } from '../../db/media'
 import { createMenuItem, getMenuItemById, listMenuItems, updateMenuItem } from '../../db/menu_items'
@@ -14,6 +15,7 @@ import { adminT } from '../../lib/i18n'
 import { imgUrl, storeUpload } from '../../lib/images'
 import {
   branchSchema,
+  clientSchema,
   cuisineSchema,
   menuItemSchema,
   IMAGE_TYPES,
@@ -34,7 +36,7 @@ type Values = Record<string, string>
 type Errors = Record<string, string>
 type Options = { branches: Branch[]; cuisines: Cuisine[]; media: Media[] }
 
-export type Section = 'packages' | 'menu' | 'occasions' | 'branches' | 'cuisines'
+export type Section = 'packages' | 'menu' | 'occasions' | 'clients' | 'branches' | 'cuisines'
 
 type Resource = {
   key: Section
@@ -135,6 +137,16 @@ export const resources: Resource[] = [
     get: getOccasionById,
     create: createOccasion,
     update: updateOccasion,
+  }),
+  define({
+    key: 'clients',
+    schema: clientSchema,
+    uploadFolder: 'clients',
+    fields: [{ name: 'name', kind: 'text', required: true }, ...meta],
+    list: listClients,
+    get: getClientById,
+    create: createClient,
+    update: updateClient,
   }),
   define({
     key: 'branches',

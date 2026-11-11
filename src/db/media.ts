@@ -1,6 +1,6 @@
 import { changed } from './shared'
 
-export type MediaFolder = 'packages' | 'menu' | 'gallery' | 'cuisines' | 'branches' | 'occasions'
+export type MediaFolder = 'packages' | 'menu' | 'gallery' | 'cuisines' | 'branches' | 'occasions' | 'clients'
 
 export type Media = {
   id: number
