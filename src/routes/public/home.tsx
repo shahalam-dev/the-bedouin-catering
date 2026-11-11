@@ -1,12 +1,12 @@
 import { Hono } from 'hono'
 import { listPublishedClients, type Client } from '../../db/clients'
 import { listPublishedOccasions, type Occasion } from '../../db/occasions'
-import { inLang, type WithImage } from '../../db/shared'
 import { listPublishedPackages, type PackageWithNames } from '../../db/packages'
+import { inLang, type WithImage } from '../../db/shared'
 import { listPublishedTestimonials, type Testimonial } from '../../db/testimonials'
 import { HERO_VIDEO } from '../../lib/hero'
-import { TEAM } from '../../lib/team'
 import { useI18n, withLang } from '../../lib/i18n'
+import { TEAM } from '../../lib/team'
 import { Button } from '../../views/components/Button'
 import { ClientLogos } from '../../views/components/ClientLogos'
 import { HeroVideo } from '../../views/components/HeroVideo'
@@ -104,6 +104,8 @@ const HomePage = ({ clients, occasions, packages, testimonials }: Props) => {
         </div>
       </section>
 
+      {occasions.length > 0 && <OccasionStrip occasions={occasions} />}
+
       {clients.length > 0 && (
         <section class="section clients">
           <div class="container">
@@ -117,8 +119,6 @@ const HomePage = ({ clients, occasions, packages, testimonials }: Props) => {
           </div>
         </section>
       )}
-
-      {occasions.length > 0 && <OccasionStrip occasions={occasions} />}
 
       {packages.length > 0 && (
         <section class="section">
