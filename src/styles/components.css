@@ -788,7 +788,32 @@ textarea.input {
 .testimonials {
   background: var(--grey-50);
 }
+/* Infinite carousel: same marquee as the occasion strip; two identical halves, pauses on hover/focus. */
+.testimonials__viewport {
+  overflow: hidden;
+}
+.testimonials__track {
+  display: flex;
+  width: max-content;
+  animation: marquee var(--marquee-duration, 40s) linear infinite;
+}
+.testimonials__viewport:hover .testimonials__track,
+.testimonials__viewport:focus-within .testimonials__track {
+  animation-play-state: paused;
+}
+.testimonials__track ul {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.testimonials__track li {
+  display: flex;
+  width: min(20rem, 80vw);
+  padding: var(--space-2) var(--space-3);
+}
 .testimonial-card {
+  flex: 1;
   gap: var(--space-4);
   margin: 0;
   padding: var(--space-5);
@@ -814,9 +839,21 @@ textarea.input {
   margin: 0;
 }
 .testimonial-card figcaption {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: auto;
+}
+.testimonial-card figcaption > span {
   display: grid;
   gap: var(--space-1);
-  margin-top: auto;
+}
+.testimonial-card__photo {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 .testimonial-card__name {
   color: var(--ink);
@@ -855,8 +892,10 @@ textarea.input {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .occasion-strip { overflow-x: auto; }
-  .occasion-strip__track {
+  .occasion-strip,
+  .testimonials__viewport { overflow-x: auto; }
+  .occasion-strip__track,
+  .testimonials__track {
     animation: none;
   }
   .card:hover,

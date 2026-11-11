@@ -1,23 +1,29 @@
-import { changed, type Status } from './shared'
+import { changed, type Status, type WithImage } from './shared'
 
 export type Testimonial = {
   id: number
-  customer_name: string
+  name: string
   event_type: string | null
   quote: string
   rating: number
+  image_id: number | null
   sort_order: number
   status: Status
   created_at: string
   updated_at: string
 }
 
-export type TestimonialInput = Omit<Testimonial, 'id' | 'created_at' | 'updated_at'>
+// event_type is legacy: still shown when set, no longer edited in the CMS.
+export type TestimonialInput = Omit<Testimonial, 'id' | 'event_type' | 'created_at' | 'updated_at'>
 
-export async function listPublishedTestimonials(db: D1Database): Promise<Testimonial[]> {
+export async function listPublishedTestimonials(db: D1Database): Promise<(Testimonial & WithImage)[]> {
   const { results } = await db
-    .prepare("SELECT * FROM testimonials WHERE status = 'published' ORDER BY sort_order, id DESC")
-    .all<Testimonial>()
+    .prepare(
+      `SELECT t.*, m.r2_key AS image_key, m.alt AS image_alt FROM testimonials t
+       LEFT JOIN media m ON m.id = t.image_id
+       WHERE t.status = 'published' ORDER BY t.sort_order, t.id DESC`,
+    )
+    .all<Testimonial & WithImage>()
   return results
 }
 
@@ -33,10 +39,10 @@ export function getTestimonialById(db: D1Database, id: number): Promise<Testimon
 export async function createTestimonial(db: D1Database, t: TestimonialInput): Promise<number> {
   const row = await db
     .prepare(
-      `INSERT INTO testimonials (customer_name, event_type, quote, rating, sort_order, status)
+      `INSERT INTO testimonials (name, quote, rating, image_id, sort_order, status)
        VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
     )
-    .bind(t.customer_name, t.event_type, t.quote, t.rating, t.sort_order, t.status)
+    .bind(t.name, t.quote, t.rating, t.image_id, t.sort_order, t.status)
     .first<{ id: number }>()
   return row!.id
 }
@@ -44,11 +50,11 @@ export async function createTestimonial(db: D1Database, t: TestimonialInput): Pr
 export async function updateTestimonial(db: D1Database, id: number, t: TestimonialInput): Promise<boolean> {
   const r = await db
     .prepare(
-      `UPDATE testimonials SET customer_name = ?, event_type = ?, quote = ?, rating = ?, sort_order = ?, status = ?,
+      `UPDATE testimonials SET name = ?, quote = ?, rating = ?, image_id = ?, sort_order = ?, status = ?,
          updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
        WHERE id = ?`,
     )
-    .bind(t.customer_name, t.event_type, t.quote, t.rating, t.sort_order, t.status, id)
+    .bind(t.name, t.quote, t.rating, t.image_id, t.sort_order, t.status, id)
     .run()
   return changed(r)
 }

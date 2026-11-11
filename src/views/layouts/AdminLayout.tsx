@@ -2,7 +2,7 @@ import { jsxRenderer, useRequestContext } from 'hono/jsx-renderer'
 import { Link, ViteClient } from 'vite-ssr-components/hono'
 import { adminT } from '../../lib/i18n'
 
-const sections = ['enquiries', 'packages', 'menu', 'occasions', 'clients', 'branches', 'cuisines', 'media'] as const
+const sections = ['enquiries', 'packages', 'menu', 'occasions', 'clients', 'testimonials', 'branches', 'cuisines', 'media'] as const
 
 const Sidebar = () => {
   const c = useRequestContext()

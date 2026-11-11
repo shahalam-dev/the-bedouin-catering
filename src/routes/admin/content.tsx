@@ -8,6 +8,7 @@ import { listMedia, type Media, type MediaFolder } from '../../db/media'
 import { createMenuItem, getMenuItemById, listMenuItems, updateMenuItem } from '../../db/menu_items'
 import { createOccasion, getOccasionById, listOccasions, updateOccasion } from '../../db/occasions'
 import { createPackage, getPackageById, listPackages, updatePackage } from '../../db/packages'
+import { createTestimonial, getTestimonialById, listTestimonials, updateTestimonial } from '../../db/testimonials'
 import type { Status } from '../../db/shared'
 import type { AdminEnv } from '../../lib/auth'
 import { formatRM } from '../../lib/format'
@@ -21,6 +22,7 @@ import {
   IMAGE_TYPES,
   occasionSchema,
   packageSchema,
+  testimonialSchema,
 } from '../../lib/validation'
 import { Button } from '../../views/components/Button'
 import { fieldAria, FormField } from '../../views/components/FormField'
@@ -29,14 +31,14 @@ import { StatusPill } from '../../views/components/StatusPill'
 // One editor for every "content" table. Each table is described by a Resource below:
 // its schema, form fields and db functions. Validation lives in the zod schemas.
 
-type Kind = 'text' | 'slug' | 'textarea' | 'int' | 'price' | 'lines' | 'checkbox' | 'status' | 'branch' | 'cuisine' | 'upload'
+type Kind = 'text' | 'slug' | 'textarea' | 'int' | 'price' | 'lines' | 'checkbox' | 'status' | 'branch' | 'cuisine' | 'rating' | 'upload'
 type Field = { name: string; kind: Kind; required?: boolean }
 type Row = { id: number; name: string; status: Status } & Record<string, unknown>
 type Values = Record<string, string>
 type Errors = Record<string, string>
 type Options = { branches: Branch[]; cuisines: Cuisine[]; media: Media[] }
 
-export type Section = 'packages' | 'menu' | 'occasions' | 'clients' | 'branches' | 'cuisines'
+export type Section = 'packages' | 'menu' | 'occasions' | 'clients' | 'testimonials' | 'branches' | 'cuisines'
 
 type Resource = {
   key: Section
@@ -149,6 +151,22 @@ export const resources: Resource[] = [
     update: updateClient,
   }),
   define({
+    key: 'testimonials',
+    schema: testimonialSchema,
+    uploadFolder: 'testimonials',
+    fields: [
+      { name: 'name', kind: 'text', required: true },
+      { name: 'quote', kind: 'textarea', required: true },
+      { name: 'rating', kind: 'rating', required: true },
+      ...meta,
+    ],
+    list: listTestimonials,
+    get: getTestimonialById,
+    create: createTestimonial,
+    update: updateTestimonial,
+    summary: (t) => `${t.rating}★ · ${t.quote.slice(0, 60)}`,
+  }),
+  define({
     key: 'branches',
     schema: branchSchema,
     uploadFolder: 'branches',
@@ -188,7 +206,7 @@ const errorFor = (f: Field): string => {
   const e = adminT.errors
   switch (f.kind) {
     case 'text': return f.required ? e.text : e.optionalText
-    case 'textarea': return e.optionalText
+    case 'textarea': return f.required ? e.requiredText : e.optionalText
     case 'slug': return e.slug
     case 'int': return e.int
     case 'price': return e.price
@@ -211,7 +229,7 @@ function toValues(fields: Field[], row: Row): Values {
   )
 }
 
-const NEW_DEFAULTS: Values = { status: 'draft', sort_order: '0' }
+const NEW_DEFAULTS: Values = { status: 'draft', sort_order: '0', rating: '5' }
 
 const Control = ({ f, value, error, options }: { f: Field; value: string; error?: string; options: Options }) => {
   const id = f.name
@@ -234,11 +252,13 @@ const Control = ({ f, value, error, options }: { f: Field; value: string; error?
         ? options.branches.map((b) => ({ id: String(b.id), label: b.name }))
         : f.kind === 'cuisine'
           ? options.cuisines.map((c) => ({ id: String(c.id), label: c.name }))
-          : null
+          : f.kind === 'rating'
+            ? ['5', '4', '3', '2', '1'].map((n) => ({ id: n, label: `${'★'.repeat(Number(n))} (${n})` }))
+            : null
 
   const control = choices ? (
     <select {...common}>
-      {f.kind !== 'status' && <option value="">{f.required ? adminT.choose : adminT.noneOption}</option>}
+      {f.kind !== 'status' && f.kind !== 'rating' && <option value="">{f.required ? adminT.choose : adminT.noneOption}</option>}
       {choices.map((o) => (
         <option value={o.id} selected={o.id === value}>
           {o.label}

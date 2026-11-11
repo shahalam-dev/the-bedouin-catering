@@ -4,7 +4,7 @@ import { IMAGE_WIDTHS, imagesErrorCode, type ImagePreset } from '../../lib/image
 // Resized AVIF/WebP versions of R2 uploads, in fixed presets only. Works for old JPG/PNG keys too.
 const img = new Hono<{ Bindings: Env }>()
 
-img.get('/:preset/:key{(?:packages|menu|gallery|cuisines|branches|occasions|clients)/[^/]+}', async (c) => {
+img.get('/:preset/:key{(?:packages|menu|gallery|cuisines|branches|occasions|clients|testimonials)/[^/]+}', async (c) => {
   const preset = c.req.param('preset')
   if (!Object.hasOwn(IMAGE_WIDTHS, preset)) return c.notFound()
   const key = c.req.param('key')
