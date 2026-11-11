@@ -71,7 +71,7 @@ const imageFile = z
 const alt = z.string().trim().min(3).max(300)
 
 export const mediaUploadSchema = z.object({
-  folder: z.enum(['packages', 'menu', 'gallery', 'cuisines', 'branches', 'occasions']),
+  folder: z.enum(['packages', 'menu', 'gallery', 'cuisines', 'branches', 'occasions', 'clients']),
   alt,
   file: imageFile,
 })
@@ -96,6 +96,12 @@ export const branchSchema = z
 export const occasionSchema = z
   .object({ ...common, ...imageUpload, slug, name_bm: text(120), description: text(1000), description_bm: text(1000) })
   .refine(altNeeded, { path: ['image_alt'] })
+
+// A client is only its logo, so one must be uploaded or picked from the library.
+export const clientSchema = z
+  .object({ ...common, ...imageUpload })
+  .refine(altNeeded, { path: ['image_alt'] })
+  .refine((v) => v.image_file || v.image_id, { path: ['image_file'] })
 
 export const menuItemSchema = z
   .object({

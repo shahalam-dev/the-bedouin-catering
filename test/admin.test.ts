@@ -29,6 +29,7 @@ beforeEach(async () => {
     db.prepare('DELETE FROM packages'),
     db.prepare('DELETE FROM menu_items'),
     db.prepare('DELETE FROM occasions'),
+    db.prepare('DELETE FROM clients'),
     db.prepare('DELETE FROM branches'),
     db.prepare('DELETE FROM cuisines'),
     db.prepare('DELETE FROM media'),
@@ -293,6 +294,26 @@ describe('occasion editor', () => {
     expect(bm).toContain('Hari besar')
     expect(await (await app.request('/?lang=bm', {}, env)).text()).toContain('Perkahwinan')
     expect(await (await app.request('/occasions', {}, env)).text()).not.toContain('Perkahwinan')
+  })
+})
+
+describe('client editor', () => {
+  it('requires a logo, uploads into the clients folder, shows the logo with its alt text publicly', async () => {
+    const fd = new FormData()
+    for (const [k, v] of Object.entries({ name: 'Petronas', sort_order: '0', status: 'published', image_id: '', image_alt: '' })) fd.set(k, v)
+    expect((await post('/admin/clients/new', fd)).status).toBe(400)
+
+    fd.set('image_file', new File([Uint8Array.from(atob(PNG_B64), (ch) => ch.charCodeAt(0))], 'logo.png', { type: 'image/png' }))
+    fd.set('image_alt', 'Petronas logo')
+    expect((await post('/admin/clients/new', fd)).status).toBe(303)
+
+    const [m] = (await listMedia(db)).filter((x) => x.folder === 'clients')
+    expect(m.r2_key).toMatch(/^clients\//)
+    expect(await db.prepare('SELECT * FROM clients').first()).toMatchObject({ name: 'Petronas', image_id: m.id })
+
+    const html = await (await app.request('/clients', {}, env)).text()
+    expect(html).toContain('alt="Petronas logo"')
+    expect(html).toContain(`/img/thumb/${m.r2_key}`)
   })
 })
 
