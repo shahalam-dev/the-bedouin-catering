@@ -37,6 +37,13 @@ describe('home page', () => {
     expect(html).toContain('Jamuan yang Dikenang')
     expect(html).not.toContain('Kata Pelanggan Kami')
   })
+
+  it('renders the hero video with silent-autoplay attributes and no native controls', async () => {
+    const html = await (await app.request('/', {}, env)).text()
+    const tag = html.match(/<video[^>]*>/)?.[0] ?? ''
+    for (const attr of ['autoplay', 'muted', 'loop', 'playsinline']) expect(tag).toMatch(new RegExp(` ${attr}=""`))
+    expect(tag).not.toMatch(/ controls/)
+  })
 })
 
 describe('card photos', () => {

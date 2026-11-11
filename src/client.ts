@@ -7,10 +7,40 @@ const onScroll = () => header?.classList.toggle('is-scrolled', window.scrollY > 
 window.addEventListener('scroll', onScroll, { passive: true })
 onScroll()
 
-// Data Saver on: stop the decorative hero video and show the poster instead.
+// Hero video. `.hero--static` swaps it for the poster (one fallback path, see components.css).
 const heroVideo = document.querySelector<HTMLVideoElement>('.hero-video')
-if (heroVideo && (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData) {
-  heroVideo.pause()
-  heroVideo.hidden = true
-  heroVideo.parentElement?.classList.add('hero--still')
+const hero = heroVideo?.parentElement
+if (heroVideo && hero) {
+  const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (saveData || reducedMotion) {
+    // Never play: stop the autoplay attribute and show the poster.
+    heroVideo.pause()
+    hero.classList.add('hero--static')
+  } else {
+    // Autoplay can be blocked (iOS Low Power Mode): show the poster, retry on the next gesture.
+    const play = () => {
+      heroVideo.muted = true // autoplay is only allowed when muted
+      heroVideo.play().then(
+        () => hero.classList.remove('hero--static'),
+        () => {
+          hero.classList.add('hero--static')
+          const retry = new AbortController()
+          const onGesture = () => {
+            retry.abort() // one retry for whichever event fires first (iOS counts touchend as the gesture)
+            play()
+          }
+          for (const type of ['touchstart', 'touchend', 'pointerdown', 'scroll']) {
+            window.addEventListener(type, onGesture, { once: true, passive: true, signal: retry.signal })
+          }
+        },
+      )
+    }
+    // iOS pauses the video when the tab is backgrounded.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && heroVideo.paused && !hero.classList.contains('hero--static')) play()
+    })
+    if (document.readyState === 'complete') play()
+    else window.addEventListener('load', play, { once: true })
+  }
 }
