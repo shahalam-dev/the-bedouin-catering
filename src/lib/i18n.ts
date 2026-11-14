@@ -46,6 +46,9 @@ const en = {
     teamTitle: 'Meet Our Team',
     teamLead: 'The people who cook, plan and serve your event.',
     teamPhotoAlt: (name: string) => `Portrait of ${name}`,
+    whyEyebrow: 'Why Choose Us',
+    whyTitle: ['Hotel-Standard Catering, Served with ', 'Bedouin', ' Generosity'],
+    whyLead: 'Every event is different, so we plan the menu, the setup and the service around yours — from a kenduri at home to a 600-guest reception across the Klang Valley.',
   },
   packages: {
     title: 'Our Packages',
@@ -171,6 +174,9 @@ const bm: Strings = {
     teamTitle: 'Kenali Pasukan Kami',
     teamLead: 'Insan yang memasak, merancang dan menghidang untuk majlis anda.',
     teamPhotoAlt: (name: string) => `Potret ${name}`,
+    whyEyebrow: 'Kenapa Pilih Kami',
+    whyTitle: ['Katering Standard Hotel, Dengan Kemurahan Hati ', 'Bedouin', ''],
+    whyLead: 'Setiap majlis berbeza, jadi kami rancang menu, susunan dan servis mengikut majlis anda — dari kenduri di rumah hingga resepsi 600 tetamu di sekitar Lembah Klang.',
   },
   packages: {
     title: 'Pakej Kami',

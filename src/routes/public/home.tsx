@@ -9,11 +9,12 @@ import { HERO_VIDEO } from '../../lib/hero'
 import { imgUrl } from '../../lib/images'
 import { useI18n, withLang } from '../../lib/i18n'
 import { TEAM } from '../../lib/team'
+import { WHY_US } from '../../lib/why-us'
 import { Button } from '../../views/components/Button'
 import { ClientLogos } from '../../views/components/ClientLogos'
 import { EventGallery } from '../../views/components/EventGallery'
 import { HeroVideo } from '../../views/components/HeroVideo'
-import { ChevronIcon, StarIcon } from '../../views/components/Icons'
+import { BellIcon, CalendarCheckIcon, CheckIcon, ChefHatIcon, ChevronIcon, LeafIcon, StarIcon } from '../../views/components/Icons'
 import { PackageCard } from '../../views/components/PackageCard'
 import { SectionTitle } from '../../views/components/SectionTitle'
 
@@ -145,10 +146,92 @@ const Testimonials = ({ items }: { items: (Testimonial & WithImage & Testimonial
   )
 }
 
+const WHY_ICONS = { chef: ChefHatIcon, bell: BellIcon, calendar: CalendarCheckIcon, leaf: LeafIcon }
+
+const WhyUs = () => {
+  const { lang, t } = useI18n()
+  const [before, accent, after] = t.home.whyTitle
+  return (
+    <section class="section why" id="why-us">
+      <div class="container">
+        <header class="section-title">
+          <p class="why__eyebrow">{t.home.whyEyebrow}</p>
+          <h2>
+            {before}
+            <span class="why__accent">{accent}</span>
+            {after}
+          </h2>
+          <p class="lead">{t.home.whyLead}</p>
+        </header>
+        <div class="why__grid">
+          <figure class="why__visual">
+            {/* Decorative: the same claims are in the checklist below. */}
+            <svg class="why__ring" viewBox="0 0 400 400" aria-hidden="true">
+              <path id="why-ring" d="M200 200m-180 0a180 180 0 1 1 360 0a180 180 0 1 1-360 0" fill="none" />
+              <text>
+                <textPath href="#why-ring" textLength="1125" lengthAdjust="spacing">
+                  {WHY_US.ring[lang]}
+                </textPath>
+              </text>
+            </svg>
+            <div class="why__photos" data-why-photos>
+              {WHY_US.images.map((img, i) => (
+                <img
+                  class="why__photo"
+                  src={img.src}
+                  alt={img.alt[lang]}
+                  aria-hidden={i > 0 ? 'true' : undefined}
+                  data-active={i === 0 ? '' : undefined}
+                  width="600"
+                  height="600"
+                  loading="lazy"
+                  decoding="async"
+                />
+              ))}
+            </div>
+            <figcaption class="why__badge">
+              <span class="why__badge-stat">{WHY_US.badge.stat}</span>
+              <span class="why__badge-label">{WHY_US.badge.label[lang]}</span>
+            </figcaption>
+          </figure>
+          {WHY_US.features.map((f) => {
+            const Icon = WHY_ICONS[f.icon]
+            return (
+              <div class="why__item">
+                <span class="why__icon">
+                  <Icon />
+                </span>
+                <div>
+                  <h3>
+                    <span class="why__stat">{f.stat}</span> {f.title[lang]}
+                  </h3>
+                  <p>{f.text[lang]}</p>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        <div class="why__bar">
+          <ul>
+            {WHY_US.checks.map((c) => (
+              <li>
+                <CheckIcon />
+                {c[lang]}
+              </li>
+            ))}
+          </ul>
+          <Button href="#team">{t.home.teamTitle}</Button>
+        </div>
+      </div>
+      <script src="/js/why-us.js" defer />
+    </section>
+  )
+}
+
 const TeamSection = () => {
   const { lang, t } = useI18n()
   return (
-    <section class="section team">
+    <section class="section team" id="team">
       <div class="container">
         <SectionTitle as="h2" title={t.home.teamTitle} lead={t.home.teamLead} />
         <ul class="card-grid team__list">
@@ -204,6 +287,8 @@ const HomePage = ({ clients, gallery, event, occasions, packages, testimonials }
       </section>
 
       {occasions.length > 0 && <OccasionStrip occasions={occasions} />}
+
+      <WhyUs />
 
       {gallery.length > 0 && (
         <section class="section gallery" id="gallery">
