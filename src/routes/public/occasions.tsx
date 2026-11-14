@@ -19,7 +19,7 @@ const OccasionsPage = ({ occasions }: { occasions: (Occasion & WithImage)[] }) =
           ) : (
             <div class="card-grid">
               {occasions.map((x) => inLang(x, lang)).map((o, i) => (
-                <CategoryCard label={o.name} image={o} tone={i % 2 ? 'ink' : 'crimson'}>
+                <CategoryCard label={o.name} image={o} tone={i % 2 ? 'ink' : 'primary'}>
                   {o.description && <p>{o.description}</p>}
                 </CategoryCard>
               ))}
