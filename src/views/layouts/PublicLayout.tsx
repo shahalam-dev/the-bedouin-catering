@@ -17,7 +17,7 @@ const Document = ({ children }: { children?: unknown }) => {
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&family=Montserrat:wght@400;500;600&family=Pinyon+Script&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&family=Montserrat:wght@400;500;600&display=swap"
         />
         <ViteClient />
         <Link href="/src/styles/tokens.css" rel="stylesheet" />

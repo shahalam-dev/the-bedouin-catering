@@ -38,7 +38,7 @@ export const EventGallery = ({ items, path, event, limit }: { items: Item[]; pat
         {shown.map((i, n) => (
           <li class={`gallery-card${i.is_tall ? ' gallery-card--tall' : ''}`}>
             <Photo image={i} class="gallery-card__photo" />
-            <span class={`tag gallery-card__tag category-card__tag--${n % 2 ? 'ink' : 'crimson'}`}>{i.event_type}</span>
+            <span class={`tag gallery-card__tag category-card__tag--${n % 2 ? 'ink' : 'primary'}`}>{i.event_type}</span>
             <div class="gallery-card__body on-dark">
               <h3>{i.name}</h3>
               {i.caption && <p class="caption">{i.caption}</p>}

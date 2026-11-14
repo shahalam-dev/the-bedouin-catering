@@ -10,7 +10,7 @@ body.admin {
   }
 }
 
-/* Black sidebar; active item crimson */
+/* Black sidebar; active item orange */
 .admin-sidebar {
   padding: var(--space-4);
   background: var(--ink);
@@ -51,7 +51,7 @@ body.admin {
   transition: background var(--ease);
 }
 .admin-sidebar ul a:hover { background: var(--body); }
-.admin-sidebar ul a[aria-current="page"] { background: var(--primary); }
+.admin-sidebar ul a[aria-current="page"] { background: var(--primary-strong); }
 .admin-sidebar__user {
   margin: 0 0 var(--space-2);
   color: var(--sand);
@@ -176,7 +176,7 @@ body.admin {
 .checkbox input {
   width: 20px;
   height: 20px;
-  accent-color: var(--primary);
+  accent-color: var(--primary-strong);
 }
 .form__wide { grid-column: 1 / -1; }
 .form__actions {

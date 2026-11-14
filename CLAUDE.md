@@ -55,9 +55,11 @@ Status values: `published` | `draft` | `hidden`. Public routes show only `publis
 Enquiries: `service_type` NULL = general /contact message; booking fields (event_time, address, menu_choices JSON, estimate_sen); staff fields (delivery_fee_sen, decline_reason, admin_notes). Status `new | quoted | confirmed | declined` (declined needs a reason).
 
 ## UI rules
-- Follow `docs/design-system.md` exactly: crimson `#A81E2B` / ink `#111111`, Cormorant Garamond headings, Montserrat body, Pinyon Script only for the hero title and the occasion strip.
+- Follow `docs/design-system.md` exactly: orange `--primary` `#DF5817` / `--primary-strong` `#C94E14` / ink `#111111`, Cormorant Garamond headings, Montserrat body. No script or decorative fonts.
+- `--primary` only for large orange (text ≥ 24px, icons, decorative). Any surface with white text under 24px (header, footer, buttons, stepper, active nav) uses `--primary-strong`; hover `--primary-dark`. Destructive actions stay `--error`.
+- Readability floor: body ≥ 16px desktop / 15px mobile, captions ≥ 13px, no italic body text.
 - Use the CSS variables in `styles/tokens.css`; no raw hex values in components.
-- Mobile first; breakpoints 640 / 1024. Tap targets at least 44px. Visible focus ring (2px crimson, 2px offset).
+- Mobile first; breakpoints 640 / 1024. Tap targets at least 44px. Visible focus ring (2px `--primary-strong`, 2px offset).
 - Real `<button>`, `<a>`, `<label>` + `<input>`. Every food image has descriptive alt text.
 - Copy is bilingual-ready (EN / BM): keep UI strings in `src/lib/i18n.ts`, not inline.
 

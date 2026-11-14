@@ -1,19 +1,19 @@
 # Catering Design System
 
-Bold crimson and black, warm hospitality, food as the hero. One system for the catering website and its CMS: an elegant serif for headings, a clean sans for everything you read, and an occasional decorative script.
+Bold orange and black, warm hospitality, food as the hero. One system for the catering website and its CMS: an elegant serif for headings and a clean sans for everything you read. Every font must be easy to read.
 
 ---
 
 ## 1. Brand personality
 
 - **Warm & generous.** Hospitality comes first, and the food is always the hero. Photography carries the page.
-- **Bold & confident.** Strong crimson and black blocks with high contrast.
+- **Bold & confident.** Strong orange and black blocks with high contrast.
 - **Elegant, not fussy.** Classic serif headings, simple layouts and generous white space.
 
 ## 2. Content & voice
 
 - Write like a host, not a brochure: short, warm, direct sentences.
-- Headings use **Title Case**. Section titles are centred and may highlight **one** word in crimson ("Welcome to **Our Kitchen**").
+- Headings use **Title Case**. Section titles are centred and may highlight **one** word in orange (`primary`) ("Welcome to **Our Kitchen**").
 - Prices are always per pax, written `RM 35 / pax`, with the minimum pax beside them.
 - Name occasions the way customers say them: Weddings, Corporate, Birthdays, Aqiqah, Open House.
 - The site is bilingual-ready (an EN / BM switch is optional), so keep labels short enough for both languages.
@@ -25,9 +25,10 @@ Bold crimson and black, warm hospitality, food as the hero. One system for the c
 ### Core
 | Token | Hex | Use |
 |---|---|---|
-| `primary` | `#A81E2B` | Crimson: header, footer, primary buttons, colour blocks, highlighted words. White text on it (7.3:1). |
-| `primary-dark` | `#861721` | Button hover/pressed, borders on crimson, chip text on `primary-light` |
-| `primary-light` | `#F6E4E6` | Selected states, subtle tints, badges, chips |
+| `primary` | `#DF5817` | Brand orange (Hermès Orange). Large orange surfaces, icons, decorative accents, and orange text ≥ 24px (headings, highlighted heading words, stat numbers). **Fails with small white text (3.8:1)**: never put body text, nav links or button labels on it. |
+| `primary-strong` | `#C94E14` | Header bar, footer, primary buttons, step-indicator circles, active nav/sidebar items, focus ring, any surface with white text under 24px (white on it 4.6:1). Also small orange text on white (4.6:1). |
+| `primary-dark` | `#A8410F` | Hover/pressed for `primary-strong`, borders on orange, small orange text on cream or on `primary-light` (5.3–5.8:1), chip text |
+| `primary-light` | `#FCEBDD` | Selected states, chip and badge backgrounds, tints |
 | `ink` | `#111111` | Headings, black section blocks, secondary buttons, labels, CMS sidebar |
 | `body` | `#3A3634` | Body text |
 | `muted` | `#7F6F61` | Captions, helper text, meta info (4.8:1 on white) |
@@ -43,14 +44,14 @@ Bold crimson and black, warm hospitality, food as the hero. One system for the c
 ### Accents (use sparingly)
 | Token | Hex | Use |
 |---|---|---|
-| `saffron` | `#C44D24` | Price highlights, the "Popular" tag (white text, 4.7:1) |
+| `accent` | `#1F5C5A` | Deep teal: the "Popular" tag and other rare highlights (white text, 7.7:1) |
 | `sand` | `#D1B18D` | Decorative lines, icons on dark, photo placeholders. Not for text on white. |
 
 ### Status (CMS & forms)
 | Token | Hex | Use |
 |---|---|---|
 | `success` | `#2E7D4F` | Success messages, Published status |
-| `warning` | `#C98A1B` | Warnings, Hidden status. **Fails as text on white (2.9:1)**, so use it only as a dot, icon or fill with ink text. |
+| `warning` | `#9A5B0B` | Warnings, Hidden status. Darker amber so it doesn't read as brand orange. Use it as a dot or icon, with ink text. |
 | `error` | `#C62828` | Input errors, destructive outline buttons |
 | `info` | `#2F6FA3` | Informational notices |
 
@@ -61,9 +62,12 @@ Bold crimson and black, warm hospitality, food as the hero. One system for the c
 | `overlay` | `rgba(0,0,0,0.55)` | Hero photo overlay so white text reads clearly |
 
 **Rules**
-- Text on `primary` or `ink` is always white.
-- Balance each page at roughly **60%** white/cream, **30%** crimson/black blocks and **10%** accents.
-- Never put crimson text on a black background.
+- Text on `primary-strong`, `primary` or `ink` is always white; on `primary` only at 24px+.
+- Any surface carrying white text under 24px uses `primary-strong`, never `primary`. Hover is `primary-dark`.
+- Small orange text: `primary-strong` on white, `primary-dark` on cream or `primary-light`.
+- Orange text on black is allowed only at 24px+ (5.0:1).
+- Destructive actions stay `error` red and never use an orange token.
+- Balance each page at roughly **60%** white/cream, **30%** orange/black blocks and **10%** accents.
 
 ---
 
@@ -73,15 +77,14 @@ Bold crimson and black, warm hospitality, food as the hero. One system for the c
 |---|---|---|---|
 | Headings, prices, stats, buttons | **Cormorant Garamond** | 700 | Georgia, serif |
 | Body / UI | **Montserrat** | 400, 500, 600 | Arial, sans-serif |
-| Decorative script | **Pinyon Script** | 400 | cursive |
 
-All three are Google Fonts:
-`https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&family=Montserrat:wght@400;500;600&family=Pinyon+Script&display=swap`
+Both are Google Fonts:
+`https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&family=Montserrat:wght@400;500;600&display=swap`
 
 ### Scale (desktop / mobile)
 | Style | Size | Font / weight | Line height |
 |---|---|---|---|
-| Display (hero script) | 72 / 44px | Pinyon Script 400 | 1.1 |
+| Hero title | 64 / 40px | Cormorant 700, white | 1.1 |
 | H1 | 48 / 34px | Cormorant 700 | 1.15 |
 | H2 (section title) | 36 / 28px | Cormorant 700 | 1.2 |
 | H3 (card title) | 24 / 20px | Cormorant 700 | 1.25 |
@@ -89,14 +92,14 @@ All three are Google Fonts:
 | Stat number | 48 / 36px | Cormorant 700 | 1 |
 | Button | 18px | Cormorant 700 | 1 |
 | Body L | 18 / 16px | Montserrat 400 | 1.6 |
-| Body | 15 / 14px | Montserrat 400 | 1.6 |
-| Caption | 13 / 12px | Montserrat 400 | 1.5 |
+| Body | 16 / 15px | Montserrat 400 | 1.6 |
+| Caption | 13 / 13px | Montserrat 400 | 1.5 |
 | Nav | 14px | Montserrat 500 (600 for emphasis) | 1 |
 | Form label | 13px | Montserrat 500 | 1.4 |
 
 **Rules**
-- Use the script font **only** for the hero title and the occasion strip, never for body text or buttons.
-- Section titles are centred, with an optional single crimson word.
+- **Readability floor:** body text at least 16px desktop / 15px mobile; captions at least 13px. No italic for body paragraphs (testimonial quotes are upright).
+- Section titles are centred, with an optional single orange (`primary`) word.
 
 ---
 
@@ -109,7 +112,7 @@ All three are Google Fonts:
 - **Section padding:** 96px vertical (mobile 56px)
 - **Header height:** 72px
 - **Minimum tap target:** 44px
-- **Signature layout: 50/50 split blocks.** Crimson | photo or black | crimson side by side, stacked on mobile.
+- **Signature layout: 50/50 split blocks.** Orange (`primary-strong` when it holds paragraphs) | photo or black | orange side by side, stacked on mobile.
 
 ## 6. Shape, elevation & imagery
 
@@ -127,25 +130,25 @@ All three are Google Fonts:
 ## 7. Components
 
 ### Header / nav
-- Crimson bar, 72px high. Logo on the left, links centred (white Montserrat 500 14px), and a **white "Get a Quote" button** with crimson text on the right. An EN / BM switch is optional.
+- `primary-strong` bar, 72px high. Logo on the left, links centred (white Montserrat 500 14px), and a **white "Get a Quote" button** with `primary-strong` text on the right. An EN / BM switch is optional.
 - Sticky on scroll; adds the header shadow once the page has scrolled.
-- Mobile: logo + hamburger, opening a full-screen crimson menu.
+- Mobile: logo + hamburger, opening a full-screen `primary-strong` menu.
 
 ### Buttons
 | Variant | Style |
 |---|---|
-| Primary | Crimson bg, white text; hover `primary-dark` |
-| Secondary | Black bg, white text (on crimson blocks) |
-| Inverse | White bg, crimson text (on crimson header/blocks) |
-| Outline | 1.5px crimson border, crimson text, transparent bg |
+| Primary | `primary-strong` bg, white text; hover `primary-dark` |
+| Secondary | Black bg, white text (on orange blocks) |
+| Inverse | White bg, `primary-strong` text (on orange header/blocks) |
+| Outline | 1.5px border + text in `primary-strong` on white (`primary-dark` on cream), transparent bg |
 | Danger (CMS) | 1.5px `error` border and text, transparent bg |
 | WhatsApp | 56px floating circle, `#25D366`, bottom-right, line chat icon |
 
 All buttons: 4px radius, 12×24px padding, Cormorant Garamond 700 18px, min height 44px, 200ms ease-out transitions.
 
 ### Image category card *(signature)*
-- Rounded photo (8px) with a **label tag overlapping the bottom edge**. The tag is a small crimson or black rectangle (4px radius) with white Cormorant 700 text ("Corporate", "Wedding", "Buffet").
-- Featured variant: the photo sits inside a crimson frame with a white title below.
+- Rounded photo (8px) with a **label tag overlapping the bottom edge**. The tag is a small rectangle alternating `primary-strong` and black (4px radius) with white Cormorant 700 text ("Corporate", "Wedding", "Buffet").
+- Featured variant: the photo sits inside a `primary-strong` frame with a white title below.
 
 ### Package card
 - White card with a 1px border and the card shadow; it lifts 4px on hover.
@@ -153,19 +156,19 @@ All buttons: 4px radius, 12×24px padding, Cormorant Garamond 700 18px, min heig
   1. photo
   2. name (H3)
   3. cuisine + branch chips (`primary-light` bg, `primary-dark` text)
-  4. **price per pax** (Cormorant 700, crimson, "RM 35 / pax")
+  4. **price per pax** (Cormorant 700, `primary-strong`, "RM 35 / pax")
   5. min pax (muted)
-  6. 3–5 inclusion bullets with crimson check icons
+  6. 3–5 inclusion bullets with `primary` check icons
   7. primary "Select" / "Enquire" button
-- Popular packages get a saffron "Popular" tag in the top-left corner.
+- Popular packages get an `accent` (teal) "Popular" tag in the top-left corner.
 
 ### Menu card (dish)
-- **Grid style:** photo, dish name (H4), 2-line description (caption), price right-aligned in crimson.
-- **List style:** circular 72px thumbnail with a 3px white border, name and description beside it. Used on crimson "Bestsellers" blocks with white text.
+- **Grid style:** photo, dish name (H4), 2-line description (caption), price right-aligned in `primary-strong`.
+- **List style:** circular 72px thumbnail with a 3px white border, name and description beside it. Used on `primary-strong` "Bestsellers" blocks with white text (`primary` only if all text is ≥ 18px bold).
 
 ### Package selector (branch → cuisine → package)
-- **Stepper:** three 32px numbered circles joined by a line. The active step is a crimson fill with a white number; done steps have a crimson outline and check; upcoming steps have a muted outline. The connector line turns crimson once a step is done.
-- **Options:** large selectable image cards. The selected card gets a 2px crimson border, a `primary-light` tint and a crimson check badge in the top-right corner.
+- **Stepper:** three 32px numbered circles joined by a line. The active step is a `primary-strong` fill with a white number; done steps have a `primary-strong` outline and check; upcoming steps have a muted outline. The connector line turns `primary-strong` once a step is done.
+- **Options:** large selectable image cards. The selected card gets a 2px `primary-strong` border, a `primary-light` tint and a `primary-strong` check badge in the top-right corner.
 - **Previous selections:** removable chips above the options ("Branch: Shah Alam ×").
 - **Mobile:** a sticky bottom bar with "Back" (outline) and "Next" (primary) buttons.
 
@@ -173,27 +176,27 @@ All buttons: 4px radius, 12×24px padding, Cormorant Garamond 700 18px, min heig
 - Small white card with the card shadow: a big Cormorant 700 number (48px, ink) and a Montserrat 500 13px muted caption below it ("50+ Packages", "3 Branches", "1,000+ Events").
 
 ### Occasion strip
-- A full-width marquee of occasions in crimson Pinyon Script, separated by middle dots: "Weddings · Corporate · Birthdays · Aqiqah · Open House".
+- A full-width marquee of occasions in Cormorant Garamond 700 upright (no italic), 36px desktop / 28px mobile, `primary`, separated by small `sand` dots: "Weddings • Corporate • Birthdays • Aqiqah • Open House".
 - Thin sand rules above and below.
 - Scrolls slowly and continuously, pauses on hover, and stops under `prefers-reduced-motion`.
 - Duplicate the list inside the track so the loop is seamless.
 
 ### Testimonial card
-- Sits on the grey-50 band. White card with the card shadow containing five crimson stars, the quote in Body L italic, the customer name in Cormorant 700 and the event type as a muted caption.
+- Sits on the grey-50 band. White card with the card shadow containing five `primary` stars, the quote in Body L upright (no italic), the customer name in Cormorant 700 and the event type as a muted caption.
 
 ### Forms
 - **Inputs:** 48px high, white, 1px `border`, 4px radius, Montserrat 15px. The label sits above in Montserrat 500 13px ink.
-- **Focus:** 2px crimson ring. **Error:** red border plus a red helper message below.
+- **Focus:** 2px `primary-strong` ring. **Error:** red border plus a red helper message below.
 - **Enquiry fields:** name, phone, email, event date, pax, branch, cuisine, package, message.
 
 ### Footer
-- Crimson background with a centred white logo, a short description, links separated by thin white vertical dividers, line social icons, and the copyright at 12px.
+- `primary-strong` background with a centred white logo, a short description, links separated by thin white vertical dividers, line social icons, and the copyright at 13px.
 
 ### CMS (admin)
-- Same fonts and colours in a calmer layout: a grey-50 background, white content panels, and a **black sidebar** whose active item is crimson.
+- Same fonts and colours in a calmer layout: a grey-50 background, white content panels, and a **black sidebar** whose active item is `primary-strong`.
 - **Tables:** white, 1px row borders, cream hover tint, Edit / Delete actions right-aligned.
 - **Status pills:** a coloured dot with ink text. Published = success, Draft = muted, Hidden = warning.
-- **Actions:** primary actions use the crimson button; destructive actions use the red outline button.
+- **Actions:** primary actions use the `primary-strong` button; destructive actions use the red outline button.
 
 ---
 
@@ -206,9 +209,9 @@ All buttons: 4px radius, 12×24px padding, Cormorant Garamond 700 18px, min heig
 
 ## 9. Accessibility
 
-- Body text contrast at least 4.5:1. Crimson on white passes (7.3:1) for text and buttons, and muted passes (4.8:1).
-- Every food image has descriptive alt text ("Lamb mandi on a shared platter with saffron rice").
-- Visible focus ring on all interactive elements: 2px crimson with a 2px offset.
+- Body text contrast at least 4.5:1. `primary-strong` on white passes (4.6:1) for small text and buttons, `primary` passes only at 24px+, and muted passes (4.8:1).
+- Every food image has descriptive alt text ("Lamb mandi on a shared platter with spiced rice").
+- Visible focus ring on all interactive elements: 2px `primary-strong` with a 2px offset.
 - Minimum tap target is 44px.
 
 ---
@@ -216,13 +219,14 @@ All buttons: 4px radius, 12×24px padding, Cormorant Garamond 700 18px, min heig
 ## 10. CSS tokens
 
 ```css
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&family=Montserrat:wght@400;500;600&family=Pinyon+Script&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@700&family=Montserrat:wght@400;500;600&display=swap');
 
 :root {
   /* Core */
-  --primary: #a81e2b;
-  --primary-dark: #861721;
-  --primary-light: #f6e4e6;
+  --primary: #df5817;
+  --primary-strong: #c94e14;
+  --primary-dark: #a8410f;
+  --primary-light: #fcebdd;
   --ink: #111111;
   --body: #3a3634;
   --muted: #7f6f61;
@@ -234,12 +238,12 @@ All buttons: 4px radius, 12×24px padding, Cormorant Garamond 700 18px, min heig
   --border: #e5e1da;
 
   /* Accents */
-  --saffron: #c44d24;
+  --accent: #1f5c5a;
   --sand: #d1b18d;
 
   /* Status */
   --success: #2e7d4f;
-  --warning: #c98a1b;
+  --warning: #9a5b0b;
   --error: #c62828;
   --info: #2f6fa3;
 
@@ -250,7 +254,6 @@ All buttons: 4px radius, 12×24px padding, Cormorant Garamond 700 18px, min heig
   /* Fonts */
   --font-serif: "Cormorant Garamond", Georgia, serif;
   --font-sans: Montserrat, Arial, sans-serif;
-  --font-script: "Pinyon Script", cursive;
 
   /* Spacing */
   --space-1: 4px;
@@ -292,17 +295,16 @@ All buttons: 4px radius, 12×24px padding, Cormorant Garamond 700 18px, min heig
 // tailwind.config.js — theme.extend
 {
   colors: {
-    primary: { DEFAULT: '#A81E2B', dark: '#861721', light: '#F6E4E6' },
+    primary: { DEFAULT: '#DF5817', strong: '#C94E14', dark: '#A8410F', light: '#FCEBDD' },
     ink: '#111111', body: '#3A3634', muted: '#7F6F61',
     cream: '#FDF9EF', 'grey-50': '#F3F3F3', border: '#E5E1DA',
-    saffron: '#C44D24', sand: '#D1B18D',
-    success: '#2E7D4F', warning: '#C98A1B', error: '#C62828', info: '#2F6FA3',
+    accent: '#1F5C5A', sand: '#D1B18D',
+    success: '#2E7D4F', warning: '#9A5B0B', error: '#C62828', info: '#2F6FA3',
     whatsapp: '#25D366',
   },
   fontFamily: {
     serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
     sans: ['Montserrat', 'Arial', 'sans-serif'],
-    script: ['"Pinyon Script"', 'cursive'],
   },
   borderRadius: { sm: '4px', md: '8px', lg: '12px' },
   boxShadow: {

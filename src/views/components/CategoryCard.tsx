@@ -6,9 +6,9 @@ import { Photo } from './Photo'
 export const CategoryCard = ({
   label,
   image,
-  tone = 'crimson',
+  tone = 'primary',
   children,
-}: PropsWithChildren<{ label: string; image: WithImage; tone?: 'crimson' | 'ink' }>) => (
+}: PropsWithChildren<{ label: string; image: WithImage; tone?: 'primary' | 'ink' }>) => (
   <article class="category-card">
     <Photo image={image} class="category-card__photo" />
     <h3 class={`category-card__tag category-card__tag--${tone}`}>{label}</h3>
