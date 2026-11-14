@@ -10,8 +10,6 @@ export type Package = {
   service_type: ServiceType
   name: string
   name_bm: string | null
-  description: string | null
-  description_bm: string | null
   price_sen: number
   min_pax: number
   max_pax: number | null
@@ -19,6 +17,8 @@ export type Package = {
   inclusions_bm: string[]
   is_popular: boolean
   image_id: number | null
+  /** R2 key of the details PDF, served at /media/<key>. */
+  pdf_key: string | null
   sort_order: number
   status: Status
   created_at: string
@@ -34,7 +34,7 @@ export type PackageWithNames = Package & WithImage & {
 
 export type PackageInput = Omit<Package, 'id' | 'created_at' | 'updated_at'>
 
-/** Name, description and inclusions in the visitor's language; empty BM copy falls back to English. */
+/** Name and inclusions in the visitor's language; empty BM copy falls back to English. */
 export const packageInLang = <T extends Package>(p: T, lang: Lang): T => {
   const out = inLang(p, lang)
   return lang === 'bm' && p.inclusions_bm.length ? { ...out, inclusions: p.inclusions_bm } : out
@@ -103,13 +103,13 @@ export async function createPackage(db: D1Database, p: PackageInput): Promise<nu
   const row = await db
     .prepare(
       `INSERT INTO packages
-         (slug, cuisine_id, service_type, name, name_bm, description, description_bm, price_sen, min_pax, max_pax,
-          inclusions, inclusions_bm, is_popular, image_id, sort_order, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+         (slug, cuisine_id, service_type, name, name_bm, price_sen, min_pax, max_pax,
+          inclusions, inclusions_bm, is_popular, image_id, pdf_key, sort_order, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
     )
     .bind(
-      p.slug, p.cuisine_id, p.service_type, p.name, p.name_bm, p.description, p.description_bm, p.price_sen, p.min_pax, p.max_pax,
-      JSON.stringify(p.inclusions), JSON.stringify(p.inclusions_bm), p.is_popular ? 1 : 0, p.image_id, p.sort_order, p.status,
+      p.slug, p.cuisine_id, p.service_type, p.name, p.name_bm, p.price_sen, p.min_pax, p.max_pax,
+      JSON.stringify(p.inclusions), JSON.stringify(p.inclusions_bm), p.is_popular ? 1 : 0, p.image_id, p.pdf_key, p.sort_order, p.status,
     )
     .first<{ id: number }>()
   return row!.id
@@ -119,14 +119,14 @@ export async function updatePackage(db: D1Database, id: number, p: PackageInput)
   const r = await db
     .prepare(
       `UPDATE packages SET
-         slug = ?, cuisine_id = ?, service_type = ?, name = ?, name_bm = ?, description = ?, description_bm = ?,
-         price_sen = ?, min_pax = ?, max_pax = ?, inclusions = ?, inclusions_bm = ?, is_popular = ?, image_id = ?, sort_order = ?, status = ?,
+         slug = ?, cuisine_id = ?, service_type = ?, name = ?, name_bm = ?,
+         price_sen = ?, min_pax = ?, max_pax = ?, inclusions = ?, inclusions_bm = ?, is_popular = ?, image_id = ?, pdf_key = ?, sort_order = ?, status = ?,
          updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
        WHERE id = ?`,
     )
     .bind(
-      p.slug, p.cuisine_id, p.service_type, p.name, p.name_bm, p.description, p.description_bm, p.price_sen, p.min_pax, p.max_pax,
-      JSON.stringify(p.inclusions), JSON.stringify(p.inclusions_bm), p.is_popular ? 1 : 0, p.image_id, p.sort_order, p.status, id,
+      p.slug, p.cuisine_id, p.service_type, p.name, p.name_bm, p.price_sen, p.min_pax, p.max_pax,
+      JSON.stringify(p.inclusions), JSON.stringify(p.inclusions_bm), p.is_popular ? 1 : 0, p.image_id, p.pdf_key, p.sort_order, p.status, id,
     )
     .run()
   return changed(r)

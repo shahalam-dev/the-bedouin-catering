@@ -10,7 +10,8 @@ export const changed = (r: D1Result) => (r.meta.changes ?? 0) > 0
 export type WithImage = { image_key: string | null; image_alt: string | null }
 
 
-type Bilingual = { name: string; name_bm: string | null; description: string | null; description_bm: string | null }
+// Packages and menu items have no description (their details are a PDF).
+type Bilingual = { name: string; name_bm: string | null; description?: string | null; description_bm?: string | null }
 
 /** Name and description in the visitor's language; BM falls back to English when not filled in. */
 export const inLang = <T extends Bilingual>(row: T, lang: Lang): T =>

@@ -29,6 +29,8 @@ const en = {
   back: 'Back',
   next: 'Next',
   enquire: 'Enquire',
+  viewPdf: 'View menu (PDF)',
+  opensNewTab: '(opens in a new tab)',
   home: {
     title: 'Catering for Every Occasion',
     heroTitle: 'Feasts to Remember',
@@ -201,6 +203,8 @@ const bm: Strings = {
   back: 'Kembali',
   next: 'Seterusnya',
   enquire: 'Tanya',
+  viewPdf: 'Lihat menu (PDF)',
+  opensNewTab: '(dibuka dalam tab baharu)',
   home: {
     title: 'Katering untuk Setiap Majlis',
     heroTitle: 'Jamuan yang Dikenang',
@@ -505,12 +509,15 @@ export const adminT = {
     library: 'Image library',
     uploadNew: 'Upload a new image (replaces the one chosen below)',
     orChoose: 'Or choose an image from the library',
+    pdf: 'Details PDF (menu and inclusions, up to 20 MB). Choose a file to replace the current one.',
+    currentPdf: 'Open the current PDF',
     unreadable: 'This file could not be read as an image. Please try another file.',
     unavailable: 'Image processing is temporarily unavailable, please try again later.',
     errors: {
       file: 'Please choose a JPG, PNG, WebP or HEIC image up to 15 MB.',
       alt: 'Please describe the image (3 to 300 characters).',
       folder: 'Please choose a folder.',
+      pdf: 'Please choose a PDF file up to 20 MB.',
     },
   },
 }

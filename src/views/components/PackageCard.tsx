@@ -1,38 +1,20 @@
-import { packageInLang, type PackageWithNames } from '../../db/packages'
-import { formatRM } from '../../lib/format'
+import { inLang } from '../../db/shared'
+import type { PackageWithNames } from '../../db/packages'
 import { useI18n, withLang } from '../../lib/i18n'
 import { Button } from './Button'
-import { CheckIcon } from './Icons'
+import { PdfLink } from './PdfLink'
 import { Photo } from './Photo'
 
-/** `href` is the Enquire link; by default it starts the package selector with this package. */
+/** Poster, name, details PDF. `href` is the Enquire link; by default it starts the package selector with this package. */
 export const PackageCard = ({ pkg: raw, href }: { pkg: PackageWithNames; href?: string }) => {
   const { lang, t } = useI18n()
-  const pkg = packageInLang(raw, lang)
+  const pkg = inLang(raw, lang)
   return (
-    <article class="card package-card">
+    <article class="card poster-card">
       <Photo image={pkg} class="card__photo" />
-      {pkg.is_popular && <span class="tag tag--popular">{t.popular}</span>}
       <div class="card__body">
         <h3>{pkg.name}</h3>
-        <ul class="chips" aria-label={`${t.packages.steps.cuisine}, ${t.packages.steps.service}`}>
-          <li class="chip">{(lang === 'bm' && pkg.cuisine_name_bm) || pkg.cuisine_name}</li>
-          <li class="chip">{t.packages.serviceChip[pkg.service_type]}</li>
-        </ul>
-        <p class="price">
-          {formatRM(pkg.price_sen)} <span class="price__unit">{t.perPax}</span>
-        </p>
-        <p class="caption">{t.packages.paxRange(pkg.min_pax, pkg.max_pax)}</p>
-        {pkg.inclusions.length > 0 && (
-          <ul class="inclusions">
-            {pkg.inclusions.slice(0, 5).map((item) => (
-              <li>
-                <CheckIcon />
-                {item}
-              </li>
-            ))}
-          </ul>
-        )}
+        {pkg.pdf_key && <PdfLink pdfKey={pkg.pdf_key} name={pkg.name} />}
         <Button
           href={href ?? withLang(`/packages?${new URLSearchParams({ cuisine: pkg.cuisine_slug, package: pkg.slug })}`, lang)}
           class="card__action"

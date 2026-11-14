@@ -48,9 +48,9 @@ beforeEach(async () => {
   ])
   branchId = await createBranch(db, { slug: 'a', name: 'Branch A', name_bm: null, address: null, phone: null, maps_link: null, has_hall: true, hall_capacity: 120, image_id: null, sort_order: 0, status: 'published' })
   const cuisineId = await createCuisine(db, { slug: 'arab', name: 'Arab', name_bm: null, description: null, description_bm: null, image_id: null, sort_order: 0, status: 'published' })
-  const pkg = { cuisine_id: cuisineId, service_type: 'both' as const, name_bm: null, description: null, description_bm: null, price_sen: 3500, min_pax: 50, max_pax: 300, inclusions: [], inclusions_bm: [], is_popular: false, image_id: null, sort_order: 0 }
+  const pkg = { cuisine_id: cuisineId, service_type: 'both' as const, name_bm: null, pdf_key: null, price_sen: 3500, min_pax: 50, max_pax: 300, inclusions: [], inclusions_bm: [], is_popular: false, image_id: null, sort_order: 0 }
   packageId = await createPackage(db, { ...pkg, slug: 'p1', name: 'P1', status: 'published' })
-  const item = { cuisine_id: cuisineId, name_bm: null, description: null, description_bm: null, category: null, price_sen: null, is_bestseller: false, image_id: null, sort_order: 0, status: 'published' as const }
+  const item = { cuisine_id: cuisineId, name_bm: null, pdf_key: null, category: null, price_sen: null, is_bestseller: false, image_id: null, sort_order: 0, status: 'published' as const }
   lambId = await createMenuItem(db, { ...item, name: 'Lamb Mandi' })
   const chicken = await createMenuItem(db, { ...item, name: 'Chicken Kabsa' })
   groupId = await createGroup(db, { package_id: packageId, name: 'Mains', name_bm: null, choose_count: 1, sort_order: 0 }, [lambId, chicken])

@@ -328,12 +328,6 @@
   font-family: var(--font-serif);
   font-weight: 700;
 }
-.tag--popular {
-  position: absolute;
-  top: var(--space-3);
-  left: var(--space-3);
-  background: var(--saffron);
-}
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -378,53 +372,15 @@
   margin-bottom: var(--space-5);
 }
 
-/* Price */
-.price {
-  margin: var(--space-2) 0 0;
-  color: var(--primary);
-  font-family: var(--font-serif);
-  font-size: var(--fs-h3);
-  font-weight: 700;
-  line-height: 1.2;
+/* Poster card (packages, menu): portrait poster, name, details PDF link */
+.poster-card .card__photo {
+  aspect-ratio: 2 / 3;
 }
-.price__unit {
-  font-size: var(--fs-body);
-}
-.price--small {
-  margin: 0;
-  font-size: var(--fs-h4);
-  white-space: nowrap;
-}
-
-.inclusions {
-  display: grid;
-  gap: var(--space-2);
-  margin: var(--space-2) 0 var(--space-4);
-  padding: 0;
-  list-style: none;
-}
-.inclusions li {
-  display: flex;
-  gap: var(--space-2);
-  align-items: flex-start;
-}
-.inclusions svg {
-  flex: none;
-  color: var(--primary);
-}
-
-/* Menu card */
-.menu-card__head {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-3);
-  align-items: baseline;
-}
-.menu-card__desc {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+.pdf-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 600;
 }
 
 /* Category card (occasions) */

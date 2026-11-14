@@ -31,8 +31,7 @@ const pkg = (over: Partial<PackageInput> = {}): PackageInput => ({
   service_type: 'both',
   name: 'Package',
   name_bm: null,
-  description: null,
-  description_bm: null,
+  pdf_key: null,
   price_sen: 3500,
   min_pax: 50,
   max_pax: null,
@@ -57,7 +56,7 @@ const enquiry = (over: Partial<EnquiryInput> = {}): EnquiryInput => ({
 })
 
 const dish = (name: string, cuisine_id = arab) =>
-  createMenuItem(db, { cuisine_id, name, name_bm: null, description: null, description_bm: null, category: null, price_sen: null, is_bestseller: false, image_id: null, sort_order: 0, status: 'published' })
+  createMenuItem(db, { cuisine_id, name, name_bm: null, pdf_key: null, category: null, price_sen: null, is_bestseller: false, image_id: null, sort_order: 0, status: 'published' })
 
 beforeEach(async () => {
   await db.batch([
