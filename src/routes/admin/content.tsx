@@ -1,14 +1,14 @@
 import { zValidator } from '@hono/zod-validator'
 import { Hono, type Context } from 'hono'
 import type { z } from 'zod'
-import { createBranch, getBranchById, listBranches, updateBranch, type Branch } from '../../db/branches'
+import { createBranch, getBranchById, listBranches, updateBranch } from '../../db/branches'
 import { createClient, getClientById, listClients, updateClient } from '../../db/clients'
 import { createGalleryItem, getGalleryItemById, listGallery, updateGalleryItem } from '../../db/gallery'
 import { createCuisine, getCuisineById, listCuisines, updateCuisine, type Cuisine } from '../../db/cuisines'
 import { listMedia, type Media, type MediaFolder } from '../../db/media'
 import { createMenuItem, getMenuItemById, listMenuItems, updateMenuItem } from '../../db/menu_items'
 import { createOccasion, getOccasionById, listOccasions, updateOccasion } from '../../db/occasions'
-import { createPackage, getPackageById, listPackages, updatePackage } from '../../db/packages'
+import { createPackage, getPackageById, listPackages, updatePackage, type ServiceType } from '../../db/packages'
 import { createTestimonial, getTestimonialById, listTestimonials, updateTestimonial } from '../../db/testimonials'
 import type { Status } from '../../db/shared'
 import type { AdminEnv } from '../../lib/auth'
@@ -33,12 +33,12 @@ import { StatusPill } from '../../views/components/StatusPill'
 // One editor for every "content" table. Each table is described by a Resource below:
 // its schema, form fields and db functions. Validation lives in the zod schemas.
 
-type Kind = 'text' | 'slug' | 'textarea' | 'int' | 'price' | 'lines' | 'checkbox' | 'status' | 'branch' | 'cuisine' | 'rating' | 'upload'
-type Field = { name: string; kind: Kind; required?: boolean; /** Overrides adminT.fields[name]. */ label?: string }
+type Kind = 'text' | 'slug' | 'textarea' | 'int' | 'price' | 'lines' | 'checkbox' | 'status' | 'service' | 'cuisine' | 'rating' | 'upload'
+type Field = { name: string; kind: Kind; required?: boolean; /** Overrides adminT.fields[name]. */ label?: string; /** Overrides the error for its kind. */ error?: string }
 type Row = { id: number; name: string; status: Status } & Record<string, unknown>
 type Values = Record<string, string>
 type Errors = Record<string, string>
-type Options = { branches: Branch[]; cuisines: Cuisine[]; media: Media[] }
+type Options = { cuisines: Cuisine[]; media: Media[] }
 
 export type Section = 'packages' | 'menu' | 'occasions' | 'gallery' | 'clients' | 'testimonials' | 'branches' | 'cuisines'
 
@@ -87,10 +87,11 @@ export const resources: Resource[] = [
       { name: 'name', kind: 'text', required: true },
       { name: 'name_bm', kind: 'text' },
       { name: 'slug', kind: 'slug', required: true },
-      { name: 'branch_id', kind: 'branch', required: true },
       { name: 'cuisine_id', kind: 'cuisine', required: true },
+      { name: 'service_type', kind: 'service', required: true },
       { name: 'price_sen', kind: 'price', required: true },
       { name: 'min_pax', kind: 'int', required: true },
+      { name: 'max_pax', kind: 'int', error: adminT.errors.maxPax },
       { name: 'inclusions', kind: 'lines' },
       { name: 'inclusions_bm', kind: 'lines' },
       { name: 'description', kind: 'textarea' },
@@ -102,7 +103,7 @@ export const resources: Resource[] = [
     get: getPackageById,
     create: createPackage,
     update: updatePackage,
-    summary: (p) => `${p.branch_name} · ${p.cuisine_name} · ${formatRM(p.price_sen)} / pax`,
+    summary: (p) => `${p.cuisine_name} · ${adminT.serviceTypes[p.service_type]} · ${formatRM(p.price_sen)} / pax`,
   }),
   define({
     key: 'menu',
@@ -199,6 +200,9 @@ export const resources: Resource[] = [
       { name: 'slug', kind: 'slug', required: true },
       { name: 'address', kind: 'textarea' },
       { name: 'phone', kind: 'text' },
+      { name: 'maps_link', kind: 'text', error: adminT.errors.url },
+      { name: 'has_hall', kind: 'checkbox' },
+      { name: 'hall_capacity', kind: 'int' },
       ...meta,
     ],
     list: listBranches,
@@ -227,6 +231,7 @@ export const resources: Resource[] = [
 
 const errorFor = (f: Field): string => {
   const e = adminT.errors
+  if (f.error) return f.error
   switch (f.kind) {
     case 'text': return f.required ? e.text : e.optionalText
     case 'textarea': return f.required ? e.requiredText : e.optionalText
@@ -252,7 +257,7 @@ function toValues(fields: Field[], row: Row): Values {
   )
 }
 
-const NEW_DEFAULTS: Values = { status: 'draft', sort_order: '0', rating: '5' }
+const NEW_DEFAULTS: Values = { status: 'draft', sort_order: '0', rating: '5', service_type: 'both' }
 
 const Control = ({ f, value, error, options }: { f: Field; value: string; error?: string; options: Options }) => {
   const id = f.name
@@ -271,8 +276,8 @@ const Control = ({ f, value, error, options }: { f: Field; value: string; error?
   const choices =
     f.kind === 'status'
       ? (Object.keys(adminT.statuses) as Status[]).map((s) => ({ id: s, label: adminT.statuses[s] }))
-      : f.kind === 'branch'
-        ? options.branches.map((b) => ({ id: String(b.id), label: b.name }))
+      : f.kind === 'service'
+        ? (Object.keys(adminT.serviceTypes) as ServiceType[]).map((s) => ({ id: s, label: adminT.serviceTypes[s] }))
         : f.kind === 'cuisine'
           ? options.cuisines.map((c) => ({ id: String(c.id), label: c.name }))
           : f.kind === 'rating'
@@ -281,7 +286,7 @@ const Control = ({ f, value, error, options }: { f: Field; value: string; error?
 
   const control = choices ? (
     <select {...common}>
-      {f.kind !== 'status' && f.kind !== 'rating' && <option value="">{f.required ? adminT.choose : adminT.noneOption}</option>}
+      {f.kind !== 'status' && f.kind !== 'rating' && f.kind !== 'service' && <option value="">{f.required ? adminT.choose : adminT.noneOption}</option>}
       {choices.map((o) => (
         <option value={o.id} selected={o.id === value}>
           {o.label}
@@ -354,6 +359,7 @@ const FormPage = ({ r, values, errors, options, id }: FormProps) => {
       <title>{`${heading} | ${adminT.title}`}</title>
       <div class="admin-head">
         <h1>{heading}</h1>
+        {r.key === 'packages' && id && <a href={`/admin/packages/${id}/groups`}>{adminT.groups.manage}</a>}
       </div>
       <form method="post" class="panel form" enctype="multipart/form-data" novalidate>
         {Object.keys(errors).length > 0 && (
@@ -434,8 +440,8 @@ const ListPage = ({ r, rows, saved }: { r: Resource; rows: Row[]; saved: boolean
 )
 
 async function loadOptions(db: D1Database): Promise<Options> {
-  const [branches, cuisines, media] = await Promise.all([listBranches(db), listCuisines(db), listMedia(db)])
-  return { branches, cuisines, media }
+  const [cuisines, media] = await Promise.all([listCuisines(db), listMedia(db)])
+  return { cuisines, media }
 }
 
 const isSlugTaken = (e: unknown) => /UNIQUE constraint failed: \w+\.slug/.test(String(e))

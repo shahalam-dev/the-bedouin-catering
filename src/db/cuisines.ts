@@ -27,18 +27,18 @@ export async function listPublishedCuisines(db: D1Database): Promise<(Cuisine & 
   return results
 }
 
-/** Package selector step 2: published cuisines that have a published package at this branch. */
-export async function listCuisinesForBranch(db: D1Database, branchId: number): Promise<(Cuisine & WithImage)[]> {
+/** Package selector step 2: published cuisines that have a published package for this service type. */
+export async function listCuisinesForService(db: D1Database, serviceType: 'in_house' | 'outside'): Promise<(Cuisine & WithImage)[]> {
   const { results } = await db
     .prepare(
       `SELECT c.*, m.r2_key AS image_key, m.alt AS image_alt FROM cuisines c
        LEFT JOIN media m ON m.id = c.image_id
        WHERE c.status = 'published'
          AND EXISTS (SELECT 1 FROM packages p
-                     WHERE p.cuisine_id = c.id AND p.branch_id = ? AND p.status = 'published')
+                     WHERE p.cuisine_id = c.id AND p.service_type IN (?, 'both') AND p.status = 'published')
        ORDER BY c.sort_order, c.name`,
     )
-    .bind(branchId)
+    .bind(serviceType)
     .all<Cuisine & WithImage>()
   return results
 }

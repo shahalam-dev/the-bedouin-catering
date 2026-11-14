@@ -1,9 +1,4 @@
 import { Hono, type Context } from 'hono'
-import { branchInLang, listPublishedBranches, type Branch } from '../../db/branches'
-import { listPublishedCuisines, type Cuisine } from '../../db/cuisines'
-import { listPublishedPackages, packageInLang, type PackageWithNames } from '../../db/packages'
-import { inLang } from '../../db/shared'
-import { formatRM } from '../../lib/format'
 import { useI18n, withLang } from '../../lib/i18n'
 import { todayInMalaysia, type EnquiryField } from '../../lib/validation'
 import { site } from '../../lib/site'
@@ -11,10 +6,9 @@ import { Button } from '../../views/components/Button'
 import { fieldAria, FormField } from '../../views/components/FormField'
 import { SectionTitle } from '../../views/components/SectionTitle'
 
-export type ContactOptions = { branches: Branch[]; cuisines: Cuisine[]; packages: PackageWithNames[] }
+// General message form. Package enquiries go through the package selector (/packages).
 
 export type ContactState = {
-  options: ContactOptions
   /** Raw form values, to refill the form after an error. */
   values?: Record<string, string>
   errors?: EnquiryField[]
@@ -22,16 +16,7 @@ export type ContactState = {
   sent?: boolean
 }
 
-export async function loadContactOptions(db: D1Database): Promise<ContactOptions> {
-  const [branches, cuisines, packages] = await Promise.all([
-    listPublishedBranches(db),
-    listPublishedCuisines(db),
-    listPublishedPackages(db),
-  ])
-  return { branches, cuisines, packages }
-}
-
-const ContactPage = ({ options, values = {}, errors = [], formError, sent, siteKey }: ContactState & { siteKey: string }) => {
+const ContactPage = ({ values = {}, errors = [], formError, sent, siteKey }: ContactState & { siteKey: string }) => {
   const { lang, t } = useI18n()
   const f = t.contact.fields
   const err = (k: EnquiryField) => (errors.includes(k) ? t.contact.errors[k] : undefined)
@@ -39,19 +24,6 @@ const ContactPage = ({ options, values = {}, errors = [], formError, sent, siteK
   const text = (k: EnquiryField, type: string, attrs: Record<string, string | number | boolean> = {}) => (
     <FormField id={k} label={f[k]} error={err(k)}>
       <input id={k} name={k} type={type} value={values[k] ?? ''} class="input" {...attrs} {...fieldAria(k, err(k))} />
-    </FormField>
-  )
-
-  const select = (k: 'branch_id' | 'cuisine_id' | 'package_id', items: { id: number; label: string }[]) => (
-    <FormField id={k} label={f[k]} error={err(k)}>
-      <select id={k} name={k} class="input" {...fieldAria(k, err(k))}>
-        <option value="">{t.contact.notSure}</option>
-        {items.map((i) => (
-          <option value={String(i.id)} selected={values[k] === String(i.id)}>
-            {i.label}
-          </option>
-        ))}
-      </select>
     </FormField>
   )
 
@@ -78,15 +50,6 @@ const ContactPage = ({ options, values = {}, errors = [], formError, sent, siteK
               {text('email', 'email', { autocomplete: 'email' })}
               {text('event_date', 'date', { min: todayInMalaysia() })}
               {text('pax', 'number', { min: 1, max: 10000, inputmode: 'numeric' })}
-              {select('branch_id', options.branches.map((b) => ({ id: b.id, label: branchInLang(b, lang).name })))}
-              {select('cuisine_id', options.cuisines.map((c) => ({ id: c.id, label: inLang(c, lang).name })))}
-              {select(
-                'package_id',
-                options.packages.map((p) => ({
-                  id: p.id,
-                  label: `${packageInLang(p, lang).name} (${(lang === 'bm' && p.branch_name_bm) || p.branch_name}, ${(lang === 'bm' && p.cuisine_name_bm) || p.cuisine_name}) ${formatRM(p.price_sen)} ${t.perPax}`,
-                })),
-              )}
             </div>
             <FormField id="message" label={f.message} error={err('message')}>
               <textarea id="message" name="message" rows={5} maxlength={2000} class="input" {...fieldAria('message', err('message'))}>
@@ -117,14 +80,6 @@ export function renderContact(c: Context, env: Env, state: ContactState) {
 
 const contact = new Hono<{ Bindings: Env }>()
 
-contact.get('/', async (c) => {
-  const options = await loadContactOptions(c.env.DB)
-  // ?package=<slug> (from a package card) pre-selects that package, its branch and cuisine.
-  const pkg = options.packages.find((p) => p.slug === c.req.query('package'))
-  const values: Record<string, string> = pkg
-    ? { package_id: String(pkg.id), branch_id: String(pkg.branch_id), cuisine_id: String(pkg.cuisine_id) }
-    : {}
-  return renderContact(c, c.env, { options, values, sent: c.req.query('sent') === '1' })
-})
+contact.get('/', (c) => renderContact(c, c.env, { sent: c.req.query('sent') === '1' }))
 
 export default contact

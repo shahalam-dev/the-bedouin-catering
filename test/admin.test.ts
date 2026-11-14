@@ -4,9 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import app from '../src/index'
 import { createBranch, getBranchById } from '../src/db/branches'
 import { createCuisine, getCuisineById } from '../src/db/cuisines'
-import { createEnquiry, getEnquiryById } from '../src/db/enquiries'
+import { createEnquiry, getEnquiryById, type EnquiryInput } from '../src/db/enquiries'
 import { createMedia, listMedia } from '../src/db/media'
-import { getPackageById, listPackages } from '../src/db/packages'
+import { createMenuItem } from '../src/db/menu_items'
+import { listGroups } from '../src/db/package_groups'
+import { createPackage, getPackageById, listPackages } from '../src/db/packages'
 import { rmToSen } from '../src/lib/validation'
 
 const db = env.DB
@@ -26,6 +28,7 @@ let cuisineId: number
 beforeEach(async () => {
   await db.batch([
     db.prepare('DELETE FROM enquiries'),
+    db.prepare('DELETE FROM package_groups'),
     db.prepare('DELETE FROM packages'),
     db.prepare('DELETE FROM menu_items'),
     db.prepare('DELETE FROM occasions'),
@@ -36,7 +39,7 @@ beforeEach(async () => {
     db.prepare('DELETE FROM cuisines'),
     db.prepare('DELETE FROM media'),
   ])
-  branchId = await createBranch(db, { slug: 'shah-alam', name: 'Shah Alam', name_bm: null, address: null, phone: null, image_id: null, sort_order: 0, status: 'published' })
+  branchId = await createBranch(db, { slug: 'shah-alam', name: 'Shah Alam', name_bm: null, address: null, phone: null, maps_link: null, has_hall: true, hall_capacity: 200, image_id: null, sort_order: 0, status: 'published' })
   cuisineId = await createCuisine(db, { slug: 'arab', name: 'Arab', name_bm: null, description: null, description_bm: null, image_id: null, sort_order: 0, status: 'published' })
 })
 
@@ -124,8 +127,8 @@ describe('content editor', () => {
     new URLSearchParams({
       name: 'Kambing Golek',
       slug: 'kambing-golek',
-      branch_id: String(branchId),
       cuisine_id: String(cuisineId),
+      service_type: 'both',
       price_sen: '35.50',
       min_pax: '50',
       inclusions: 'Rice\n\n  Lamb  \nDrinks',
@@ -142,7 +145,14 @@ describe('content editor', () => {
     expect(res.status).toBe(303)
     expect(res.headers.get('Location')).toBe('/admin/packages?saved=1')
     const [p] = await listPackages(db)
-    expect(p).toMatchObject({ name: 'Kambing Golek', price_sen: 3550, min_pax: 50, inclusions: ['Rice', 'Lamb', 'Drinks'], is_popular: true, description: null, sort_order: 0, status: 'published' })
+    expect(p).toMatchObject({ name: 'Kambing Golek', service_type: 'both', price_sen: 3550, min_pax: 50, max_pax: null, inclusions: ['Rice', 'Lamb', 'Drinks'], is_popular: true, description: null, sort_order: 0, status: 'published' })
+  })
+
+  it('rejects a maximum pax below the minimum', async () => {
+    const res = await post('/admin/packages/new', pkgForm({ max_pax: '10' }))
+    expect(res.status).toBe(400)
+    expect(await res.text()).toContain('at least the minimum pax')
+    expect(await listPackages(db)).toHaveLength(0)
   })
 
   it('shows field errors and keeps the typed values', async () => {
@@ -241,13 +251,13 @@ describe('cuisine editor', () => {
 
   it('shows the BM name and description on the public site with ?lang=bm, English otherwise', async () => {
     await post(`/admin/cuisines/${cuisineId}`, form())
-    await post('/admin/packages/new', new URLSearchParams({ name: 'Mandi', slug: 'mandi', branch_id: String(branchId), cuisine_id: String(cuisineId), price_sen: '30', min_pax: '10', inclusions: '', status: 'published' }))
-    const bm = await (await app.request('/packages?branch=shah-alam&lang=bm', {}, env)).text()
+    await post('/admin/packages/new', new URLSearchParams({ name: 'Mandi', slug: 'mandi', cuisine_id: String(cuisineId), service_type: 'both', price_sen: '30', min_pax: '10', inclusions: '', status: 'published' }))
+    const bm = await (await app.request('/packages?service=in_house&lang=bm', {}, env)).text()
     expect(bm).toContain('Arab (BM)')
     expect(bm).toContain('Nasi')
-    const en = await (await app.request('/packages?branch=shah-alam', {}, env)).text()
+    const en = await (await app.request('/packages?service=in_house', {}, env)).text()
     expect(en).not.toContain('Arab (BM)')
-    expect(await (await app.request('/packages?branch=shah-alam&cuisine=arab&lang=bm', {}, env)).text()).toContain('Arab (BM)')
+    expect(await (await app.request('/packages?service=in_house&cuisine=arab&lang=bm', {}, env)).text()).toContain('Arab (BM)')
   })
 })
 
@@ -256,20 +266,29 @@ describe('branch editor', () => {
     await createMedia(db, { r2_key: 'cuisines/x.webp', folder: 'cuisines', alt: 'Cuisine only', content_type: 'image/webp', size_bytes: 1, width: null, height: null })
     const fd = new FormData()
     const png = new File([Uint8Array.from(atob(PNG_B64), (ch) => ch.charCodeAt(0))], 'shop.png', { type: 'image/png' })
-    const fields = { name: 'Shah Alam', name_bm: 'Cawangan Shah Alam', slug: 'shah-alam', address: '', phone: '', sort_order: '0', status: 'published', image_id: '', image_alt: 'Our Shah Alam kitchen', image_file: png }
+    const fields = { name: 'Shah Alam', name_bm: 'Cawangan Shah Alam', slug: 'shah-alam', address: '', phone: '', maps_link: 'https://maps.app.goo.gl/abc', has_hall: 'on', hall_capacity: '250', sort_order: '0', status: 'published', image_id: '', image_alt: 'Our Shah Alam kitchen', image_file: png }
     for (const [k, v] of Object.entries(fields)) fd.set(k, v)
     expect((await post(`/admin/branches/${branchId}`, fd)).status).toBe(303)
 
     const [m] = (await listMedia(db)).filter((x) => x.folder === 'branches')
     expect(m.r2_key).toMatch(/^branches\//)
-    expect(await getBranchById(db, branchId)).toMatchObject({ name_bm: 'Cawangan Shah Alam', image_id: m.id })
+    expect(await getBranchById(db, branchId)).toMatchObject({ name_bm: 'Cawangan Shah Alam', image_id: m.id, maps_link: 'https://maps.app.goo.gl/abc', has_hall: true, hall_capacity: 250 })
 
     const html = await (await get(`/admin/branches/${branchId}`)).text()
     expect(html).toContain('Our Shah Alam kitchen')
     expect(html).not.toContain('Cuisine only')
 
-    expect(await (await app.request('/packages?lang=bm', {}, env)).text()).toContain('Cawangan Shah Alam')
-    expect(await (await app.request('/packages', {}, env)).text()).not.toContain('Cawangan Shah Alam')
+    // The branch is the venue on the details step of an in-house booking.
+    await createPackage(db, { slug: 'p', cuisine_id: cuisineId, service_type: 'in_house', name: 'P', name_bm: null, description: null, description_bm: null, price_sen: 3000, min_pax: 10, max_pax: null, inclusions: [], inclusions_bm: [], is_popular: false, image_id: null, sort_order: 0, status: 'published' })
+    const details = '/packages?service=in_house&cuisine=arab&package=p'
+    expect(await (await app.request(`${details}&lang=bm`, {}, env)).text()).toContain('Cawangan Shah Alam (dewan sehingga 250 pax)')
+    expect(await (await app.request(details, {}, env)).text()).not.toContain('Cawangan Shah Alam')
+  })
+
+  it('rejects a maps link that is not a web address', async () => {
+    const res = await post(`/admin/branches/${branchId}`, new URLSearchParams({ name: 'Shah Alam', slug: 'shah-alam', maps_link: 'javascript:alert(1)', status: 'published' }))
+    expect(res.status).toBe(400)
+    expect(await res.text()).toContain('starting with https://')
   })
 })
 
@@ -406,7 +425,7 @@ describe('package editor', () => {
     const fd = new FormData()
     const png = new File([Uint8Array.from(atob(PNG_B64), (ch) => ch.charCodeAt(0))], 'p.png', { type: 'image/png' })
     const fields = {
-      name: 'Kambing Golek', name_bm: 'Kambing Golek Istimewa', slug: 'kg', branch_id: String(branchId), cuisine_id: String(cuisineId),
+      name: 'Kambing Golek', name_bm: 'Kambing Golek Istimewa', slug: 'kg', cuisine_id: String(cuisineId), service_type: 'outside',
       price_sen: '35', min_pax: '50', inclusions: 'Rice\nDrinks', inclusions_bm: 'Nasi\nMinuman', description: '', description_bm: '',
       sort_order: '0', status: 'published', image_id: '', image_alt: 'Whole roasted lamb', image_file: png,
     }
@@ -418,44 +437,110 @@ describe('package editor', () => {
     expect(m).toMatchObject({ folder: 'packages', alt: 'Whole roasted lamb' })
     expect(p).toMatchObject({ name_bm: 'Kambing Golek Istimewa', inclusions_bm: ['Nasi', 'Minuman'], image_id: m.id })
 
-    const bm = await (await app.request('/packages?branch=shah-alam&cuisine=arab&lang=bm', {}, env)).text()
+    const bm = await (await app.request('/packages?service=outside&cuisine=arab&lang=bm', {}, env)).text()
     expect(bm).toContain('Kambing Golek Istimewa')
     expect(bm).toContain('Minuman')
-    const en = await (await app.request('/packages?branch=shah-alam&cuisine=arab', {}, env)).text()
+    const en = await (await app.request('/packages?service=outside&cuisine=arab', {}, env)).text()
     expect(en).not.toContain('Istimewa')
     expect(en).toContain('Drinks')
   })
 })
 
+describe('package groups editor', () => {
+  it('creates, edits and deletes a group with dishes of the package cuisine only', async () => {
+    const id = await createPackage(db, { slug: 'kg', cuisine_id: cuisineId, service_type: 'both', name: 'KG', name_bm: null, description: null, description_bm: null, price_sen: 3000, min_pax: 10, max_pax: null, inclusions: [], inclusions_bm: [], is_popular: false, image_id: null, sort_order: 0, status: 'published' })
+    const item = { name_bm: null, description: null, description_bm: null, category: null, price_sen: null, is_bestseller: false, image_id: null, sort_order: 0, status: 'published' as const }
+    const lamb = await createMenuItem(db, { ...item, cuisine_id: cuisineId, name: 'Lamb Mandi' })
+    const chicken = await createMenuItem(db, { ...item, cuisine_id: cuisineId, name: 'Chicken Kabsa' })
+    const other = await createMenuItem(db, { ...item, cuisine_id: null, name: 'Teh Tarik' })
+    const base = `/admin/packages/${id}/groups`
+
+    expect(await (await get(`/admin/packages/${id}`)).text()).toContain(`href="${base}"`)
+    const form = await (await get(`${base}/new`)).text()
+    expect(form).toContain('Lamb Mandi')
+    expect(form).not.toContain('Teh Tarik')
+
+    const body = (over: Record<string, string> = {}, items = [lamb, chicken]) => {
+      const f = new URLSearchParams({ name: 'Mains', choose_count: '1', sort_order: '0', ...over })
+      for (const i of items) f.append('items', String(i))
+      return f
+    }
+    // Fewer dishes than the customer must choose, or a dish from another cuisine.
+    expect((await post(`${base}/new`, body({ choose_count: '3' }))).status).toBe(400)
+    expect((await post(`${base}/new`, body({}, [lamb, other]))).status).toBe(400)
+
+    expect((await post(`${base}/new`, body())).status).toBe(303)
+    const [g] = await listGroups(db, id)
+    expect(g).toMatchObject({ name: 'Mains', choose_count: 1 })
+    expect(g!.items.map((i) => i.id).sort()).toEqual([lamb, chicken].sort())
+
+    expect((await post(`${base}/${g!.id}`, body({ name: 'Main course' }, [lamb]))).status).toBe(303)
+    expect((await listGroups(db, id))[0]).toMatchObject({ name: 'Main course', items: [expect.objectContaining({ id: lamb })] })
+
+    // A group is only reachable under its own package.
+    expect((await get(`/admin/packages/999/groups/${g!.id}`)).status).toBe(404)
+
+    expect((await post(`${base}/${g!.id}/delete`, new URLSearchParams())).status).toBe(303)
+    expect(await listGroups(db, id)).toEqual([])
+  })
+})
+
 describe('enquiries', () => {
-  it('lists enquiries by status and updates a status', async () => {
-    const id = await createEnquiry(db, { name: 'Aisha', phone: '+60 12-345 6789', email: null, event_date: null, pax: 80, branch_id: branchId, cuisine_id: null, package_id: null, message: 'Hi' })
+  const input = (over: Partial<EnquiryInput> = {}): EnquiryInput => ({
+    name: 'Aisha', phone: '+60 12-345 6789', email: null, service_type: 'in_house', event_date: null, event_time: '19:00', pax: 80,
+    branch_id: branchId, cuisine_id: null, package_id: null, menu_choices: null, address_line: null, postcode: null, city: null,
+    state: null, setup_notes: null, message: 'Hi', estimate_sen: 280000, ...over,
+  })
+
+  it('lists enquiries by status and updates status and notes', async () => {
+    const id = await createEnquiry(db, input())
 
     const html = await (await get('/admin/enquiries?status=new')).text()
     expect(html).toContain('Aisha')
     expect(html).toContain('href="tel:+60123456789"')
     expect(html).toContain(`href="/admin/enquiries/${id}"`)
-    expect(html).toContain('Event date')
+    expect(html).toContain('At branch')
     expect(html).not.toContain('Shah Alam')
-    expect(html).not.toContain('<select')
 
     const detail = await (await get(`/admin/enquiries/${id}`)).text()
     expect(detail).toContain('Shah Alam')
     expect(detail).toContain('80 pax')
-    expect(detail).toContain(`action="/admin/enquiries/${id}/status"`)
+    expect(detail).toContain('RM 2,800')
+    expect(detail).toContain(`action="/admin/enquiries/${id}"`)
+    expect(detail).not.toContain('name="delivery_fee_sen"')
     expect((await get('/admin/enquiries/999999')).status).toBe(404)
 
-    const res = await post(`/admin/enquiries/${id}/status`, new URLSearchParams({ status: 'contacted' }))
+    const res = await post(`/admin/enquiries/${id}`, new URLSearchParams({ status: 'quoted', branch_id: String(branchId), admin_notes: 'Sent quote' }))
     expect(res.status).toBe(303)
     expect(res.headers.get('Location')).toBe(`/admin/enquiries/${id}?saved=1`)
-    expect((await getEnquiryById(db, id))?.status).toBe('contacted')
+    expect(await getEnquiryById(db, id)).toMatchObject({ status: 'quoted', admin_notes: 'Sent quote', branch_id: branchId })
 
     expect(await (await get('/admin/enquiries?status=new')).text()).not.toContain('Aisha')
   })
 
-  it('rejects an unknown status', async () => {
-    const id = await createEnquiry(db, { name: 'A', phone: '+60123456789', email: null, event_date: null, pax: null, branch_id: null, cuisine_id: null, package_id: null, message: null })
-    expect((await post(`/admin/enquiries/${id}/status`, new URLSearchParams({ status: 'deleted' }))).status).toBe(400)
+  it('lets staff assign a branch and delivery fee to outside catering', async () => {
+    const id = await createEnquiry(db, input({ service_type: 'outside', branch_id: null, address_line: '12 Jalan Mawar', postcode: '40150', city: 'Shah Alam' }))
+    expect(await (await get(`/admin/enquiries/${id}`)).text()).toContain('delivery fee (not set)')
+    await post(`/admin/enquiries/${id}`, new URLSearchParams({ status: 'quoted', branch_id: String(branchId), delivery_fee_sen: '150' }))
+    expect(await getEnquiryById(db, id)).toMatchObject({ branch_id: branchId, delivery_fee_sen: 15000 })
+    expect(await (await get(`/admin/enquiries/${id}`)).text()).toContain('+ RM 150 delivery = RM 2,950')
+  })
+
+  it('ignores a delivery fee on an in-house enquiry', async () => {
+    const id = await createEnquiry(db, input())
+    await post(`/admin/enquiries/${id}`, new URLSearchParams({ status: 'new', delivery_fee_sen: '99' }))
+    expect((await getEnquiryById(db, id))?.delivery_fee_sen).toBeNull()
+  })
+
+  it('needs a reason to decline, and rejects an unknown status', async () => {
+    const id = await createEnquiry(db, input())
+    const res = await post(`/admin/enquiries/${id}`, new URLSearchParams({ status: 'declined', decline_reason: ' ' }))
+    expect(res.status).toBe(400)
+    expect(await res.text()).toContain('Please give a reason when declining.')
+    expect((await post(`/admin/enquiries/${id}`, new URLSearchParams({ status: 'deleted' }))).status).toBe(400)
+
+    await post(`/admin/enquiries/${id}`, new URLSearchParams({ status: 'declined', decline_reason: 'Fully booked' }))
+    expect(await getEnquiryById(db, id)).toMatchObject({ status: 'declined', decline_reason: 'Fully booked' })
   })
 })
 

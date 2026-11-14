@@ -1,17 +1,20 @@
 import type { Lang } from '../lib/i18n'
 import { changed, inLang, type Status, type WithImage } from './shared'
 
+export type ServiceType = 'in_house' | 'outside' | 'both'
+
 export type Package = {
   id: number
   slug: string
-  branch_id: number
   cuisine_id: number
+  service_type: ServiceType
   name: string
   name_bm: string | null
   description: string | null
   description_bm: string | null
   price_sen: number
   min_pax: number
+  max_pax: number | null
   inclusions: string[]
   inclusions_bm: string[]
   is_popular: boolean
@@ -22,11 +25,8 @@ export type Package = {
   updated_at: string
 }
 
-/** Package plus the branch and cuisine names shown as chips on the card. */
+/** Package plus the cuisine name shown as a chip on the card. */
 export type PackageWithNames = Package & WithImage & {
-  branch_name: string
-  branch_slug: string
-  branch_name_bm: string | null
   cuisine_name: string
   cuisine_name_bm: string | null
   cuisine_slug: string
@@ -47,30 +47,30 @@ function fromRow<T extends Package>(r: Row<T>): T {
 }
 
 const SELECT_WITH_NAMES = `
-  SELECT p.*, b.name AS branch_name, b.name_bm AS branch_name_bm, b.slug AS branch_slug, c.name AS cuisine_name, c.name_bm AS cuisine_name_bm, c.slug AS cuisine_slug,
+  SELECT p.*, c.name AS cuisine_name, c.name_bm AS cuisine_name_bm, c.slug AS cuisine_slug,
     m.r2_key AS image_key, m.alt AS image_alt
   FROM packages p
-  JOIN branches b ON b.id = p.branch_id
   JOIN cuisines c ON c.id = p.cuisine_id
   LEFT JOIN media m ON m.id = p.image_id`
 
 /**
- * Public listing: published packages whose branch and cuisine are also published.
+ * Public listing: published packages whose cuisine is also published.
  * Both filters are optional (pass nothing for all published packages).
+ * A service type filter also matches packages offered as 'both'.
  */
 export async function listPublishedPackages(
   db: D1Database,
-  filter: { branchId?: number; cuisineId?: number } = {},
+  filter: { serviceType?: Exclude<ServiceType, 'both'>; cuisineId?: number } = {},
 ): Promise<PackageWithNames[]> {
   const { results } = await db
     .prepare(
       `${SELECT_WITH_NAMES}
-       WHERE p.status = 'published' AND b.status = 'published' AND c.status = 'published'
-         AND (?1 IS NULL OR p.branch_id = ?1)
+       WHERE p.status = 'published' AND c.status = 'published'
+         AND (?1 IS NULL OR p.service_type IN (?1, 'both'))
          AND (?2 IS NULL OR p.cuisine_id = ?2)
        ORDER BY p.is_popular DESC, p.sort_order, p.price_sen, p.name`,
     )
-    .bind(filter.branchId ?? null, filter.cuisineId ?? null)
+    .bind(filter.serviceType ?? null, filter.cuisineId ?? null)
     .all<Row<PackageWithNames>>()
   return results.map(fromRow)
 }
@@ -79,7 +79,7 @@ export async function getPublishedPackageBySlug(db: D1Database, slug: string): P
   const row = await db
     .prepare(
       `${SELECT_WITH_NAMES}
-       WHERE p.slug = ? AND p.status = 'published' AND b.status = 'published' AND c.status = 'published'`,
+       WHERE p.slug = ? AND p.status = 'published' AND c.status = 'published'`,
     )
     .bind(slug)
     .first<Row<PackageWithNames>>()
@@ -89,7 +89,7 @@ export async function getPublishedPackageBySlug(db: D1Database, slug: string): P
 /** Admin listing: every package regardless of status. */
 export async function listPackages(db: D1Database): Promise<PackageWithNames[]> {
   const { results } = await db
-    .prepare(`${SELECT_WITH_NAMES} ORDER BY b.sort_order, c.sort_order, p.sort_order, p.name`)
+    .prepare(`${SELECT_WITH_NAMES} ORDER BY c.sort_order, p.sort_order, p.name`)
     .all<Row<PackageWithNames>>()
   return results.map(fromRow)
 }
@@ -103,12 +103,12 @@ export async function createPackage(db: D1Database, p: PackageInput): Promise<nu
   const row = await db
     .prepare(
       `INSERT INTO packages
-         (slug, branch_id, cuisine_id, name, name_bm, description, description_bm, price_sen, min_pax,
+         (slug, cuisine_id, service_type, name, name_bm, description, description_bm, price_sen, min_pax, max_pax,
           inclusions, inclusions_bm, is_popular, image_id, sort_order, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
     )
     .bind(
-      p.slug, p.branch_id, p.cuisine_id, p.name, p.name_bm, p.description, p.description_bm, p.price_sen, p.min_pax,
+      p.slug, p.cuisine_id, p.service_type, p.name, p.name_bm, p.description, p.description_bm, p.price_sen, p.min_pax, p.max_pax,
       JSON.stringify(p.inclusions), JSON.stringify(p.inclusions_bm), p.is_popular ? 1 : 0, p.image_id, p.sort_order, p.status,
     )
     .first<{ id: number }>()
@@ -119,13 +119,13 @@ export async function updatePackage(db: D1Database, id: number, p: PackageInput)
   const r = await db
     .prepare(
       `UPDATE packages SET
-         slug = ?, branch_id = ?, cuisine_id = ?, name = ?, name_bm = ?, description = ?, description_bm = ?,
-         price_sen = ?, min_pax = ?, inclusions = ?, inclusions_bm = ?, is_popular = ?, image_id = ?, sort_order = ?, status = ?,
+         slug = ?, cuisine_id = ?, service_type = ?, name = ?, name_bm = ?, description = ?, description_bm = ?,
+         price_sen = ?, min_pax = ?, max_pax = ?, inclusions = ?, inclusions_bm = ?, is_popular = ?, image_id = ?, sort_order = ?, status = ?,
          updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
        WHERE id = ?`,
     )
     .bind(
-      p.slug, p.branch_id, p.cuisine_id, p.name, p.name_bm, p.description, p.description_bm, p.price_sen, p.min_pax,
+      p.slug, p.cuisine_id, p.service_type, p.name, p.name_bm, p.description, p.description_bm, p.price_sen, p.min_pax, p.max_pax,
       JSON.stringify(p.inclusions), JSON.stringify(p.inclusions_bm), p.is_popular ? 1 : 0, p.image_id, p.sort_order, p.status, id,
     )
     .run()
