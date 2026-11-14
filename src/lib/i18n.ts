@@ -3,7 +3,7 @@ import { useRequestContext } from 'hono/jsx-renderer'
 export type Lang = 'en' | 'bm'
 
 const en = {
-  siteName: 'The Bedouin Catering',
+  siteName: 'Majlis Catering',
   skipToContent: 'Skip to content',
   mainNav: 'Main',
   footerNav: 'Footer',
@@ -48,7 +48,7 @@ const en = {
     teamLead: 'The people who cook, plan and serve your event.',
     teamPhotoAlt: (name: string) => `Portrait of ${name}`,
     whyEyebrow: 'Why Choose Us',
-    whyTitle: ['Hotel-Standard Catering, Served with ', 'Bedouin', ' Generosity'],
+    whyTitle: ['Hotel-Standard Catering, Served with ', 'Majlis', ' Generosity'],
     whyLead: 'Every event is different, so we plan the menu, the setup and the service around yours — from a kenduri at home to a 600-guest reception across the Klang Valley.',
   },
   packages: {
@@ -177,7 +177,7 @@ const en = {
 type Strings = typeof en
 
 const bm: Strings = {
-  siteName: 'The Bedouin Catering',
+  siteName: 'Majlis Catering',
   skipToContent: 'Langkau ke kandungan',
   mainNav: 'Utama',
   footerNav: 'Kaki halaman',
@@ -222,7 +222,7 @@ const bm: Strings = {
     teamLead: 'Insan yang memasak, merancang dan menghidang untuk majlis anda.',
     teamPhotoAlt: (name: string) => `Potret ${name}`,
     whyEyebrow: 'Kenapa Pilih Kami',
-    whyTitle: ['Katering Standard Hotel, Dengan Kemurahan Hati ', 'Bedouin', ''],
+    whyTitle: ['Katering Standard Hotel, Dengan Kemurahan Hati ', 'Majlis', ''],
     whyLead: 'Setiap majlis berbeza, jadi kami rancang menu, susunan dan servis mengikut majlis anda — dari kenduri di rumah hingga resepsi 600 tetamu di sekitar Lembah Klang.',
   },
   packages: {
