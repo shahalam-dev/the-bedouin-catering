@@ -44,7 +44,7 @@ export async function notifyEnquiry(env: Env, id: number, e: EnquiryInput, n: Al
   }
   try {
     await env.EMAIL.send({
-      from: { email: env.NOTIFY_FROM, name: 'The Bedouin Catering website' },
+      from: { email: env.NOTIFY_FROM, name: 'Majlis Catering website' },
       to: env.NOTIFY_TO,
       ...enquiryAlert(id, e, n),
     })
