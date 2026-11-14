@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import app from '../src/index'
 import { createBranch } from '../src/db/branches'
 import { createCuisine } from '../src/db/cuisines'
-import { createEnquiry, getEnquiryById, listEnquiries } from '../src/db/enquiries'
+import { createEnquiry, getEnquiryById, listEnquiries, type EnquiryInput } from '../src/db/enquiries'
+import { createMenuItem } from '../src/db/menu_items'
+import { createGroup } from '../src/db/package_groups'
 import { createPackage } from '../src/db/packages'
 import { enquiryAlert, notifyEnquiry } from '../src/lib/email'
 import { formatRM } from '../src/lib/format'
@@ -17,16 +19,18 @@ const testEnv = { ...env, TURNSTILE_SECRET: 'test-secret', NOTIFY_TO: '' }
 const mailEnv = (send: (...a: unknown[]) => unknown) => ({ ...env, NOTIFY_TO: 'staff@gmail.com', EMAIL: { send } as unknown as SendEmail })
 
 let packageId: number
-let draftPackageId: number
+let branchId: number
+let groupId: number
+let lambId: number
 
 // Stub Turnstile's siteverify; nothing else in these tests calls fetch.
 const siteverify = (success: boolean) =>
   vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ success }))
 
 // Waits for waitUntil() work (the email alert) so tests can check its effects.
-const post = async (fields: Record<string, string>, query = '', e: Env = testEnv) => {
+const post = async (fields: Record<string, string> | URLSearchParams, query = '', e: Env = testEnv, path = '/api/enquiries') => {
   const ctx = createExecutionContext()
-  const res = await app.request(`/api/enquiries${query}`, { method: 'POST', body: new URLSearchParams(fields) }, e, ctx)
+  const res = await app.request(`${path}${query}`, { method: 'POST', body: new URLSearchParams(fields) }, e, ctx)
   await waitOnExecutionContext(ctx)
   return res
 }
@@ -36,15 +40,20 @@ const valid = { name: 'Aisha', phone: '+60 12-345 6789', 'cf-turnstile-response'
 beforeEach(async () => {
   await db.batch([
     db.prepare('DELETE FROM enquiries'),
+    db.prepare('DELETE FROM package_groups'),
     db.prepare('DELETE FROM packages'),
+    db.prepare('DELETE FROM menu_items'),
     db.prepare('DELETE FROM branches'),
     db.prepare('DELETE FROM cuisines'),
   ])
-  const branchId = await createBranch(db, { slug: 'a', name: 'Branch A', name_bm: null, address: null, phone: null, image_id: null, sort_order: 0, status: 'published' })
+  branchId = await createBranch(db, { slug: 'a', name: 'Branch A', name_bm: null, address: null, phone: null, maps_link: null, has_hall: true, hall_capacity: 120, image_id: null, sort_order: 0, status: 'published' })
   const cuisineId = await createCuisine(db, { slug: 'arab', name: 'Arab', name_bm: null, description: null, description_bm: null, image_id: null, sort_order: 0, status: 'published' })
-  const pkg = { branch_id: branchId, cuisine_id: cuisineId, name_bm: null, description: null, description_bm: null, price_sen: 3500, min_pax: 50, inclusions: [], inclusions_bm: [], is_popular: false, image_id: null, sort_order: 0 }
+  const pkg = { cuisine_id: cuisineId, service_type: 'both' as const, name_bm: null, description: null, description_bm: null, price_sen: 3500, min_pax: 50, max_pax: 300, inclusions: [], inclusions_bm: [], is_popular: false, image_id: null, sort_order: 0 }
   packageId = await createPackage(db, { ...pkg, slug: 'p1', name: 'P1', status: 'published' })
-  draftPackageId = await createPackage(db, { ...pkg, slug: 'p2', name: 'P2', status: 'draft' })
+  const item = { cuisine_id: cuisineId, name_bm: null, description: null, description_bm: null, category: null, price_sen: null, is_bestseller: false, image_id: null, sort_order: 0, status: 'published' as const }
+  lambId = await createMenuItem(db, { ...item, name: 'Lamb Mandi' })
+  const chicken = await createMenuItem(db, { ...item, name: 'Chicken Kabsa' })
+  groupId = await createGroup(db, { package_id: packageId, name: 'Mains', name_bm: null, choose_count: 1, sort_order: 0 }, [lambId, chicken])
 })
 
 afterEach(() => {
@@ -54,12 +63,12 @@ afterEach(() => {
 describe('POST /api/enquiries', () => {
   it('saves a valid enquiry and redirects to the thank-you page', async () => {
     const fetch = siteverify(true)
-    const res = await post({ ...valid, email: 'a@example.com', pax: '80', package_id: String(packageId), message: '  Hi  ' }, '?lang=bm')
+    const res = await post({ ...valid, email: 'a@example.com', pax: '80', message: '  Hi  ' }, '?lang=bm')
 
     expect(res.status).toBe(303)
     expect(res.headers.get('Location')).toBe('/contact?sent=1&lang=bm')
     const [saved] = await listEnquiries(db)
-    expect(saved).toMatchObject({ name: 'Aisha', email: 'a@example.com', pax: 80, package_id: packageId, message: 'Hi', status: 'new' })
+    expect(saved).toMatchObject({ name: 'Aisha', email: 'a@example.com', pax: 80, service_type: null, package_id: null, message: 'Hi', status: 'new' })
     expect(saved!.notified_at).toBeNull()
 
     const sent = fetch.mock.calls[0]![1]!.body as FormData
@@ -78,14 +87,6 @@ describe('POST /api/enquiries', () => {
     expect(html).toContain('value="Aisha"')
     expect(html).toContain('aria-invalid="true"')
     expect(fetch).not.toHaveBeenCalled()
-    expect(await listEnquiries(db)).toEqual([])
-  })
-
-  it('rejects a package that is not published', async () => {
-    siteverify(true)
-    const res = await post({ ...valid, package_id: String(draftPackageId) })
-    expect(res.status).toBe(400)
-    expect(await res.text()).toContain('Please choose a package from the list')
     expect(await listEnquiries(db)).toEqual([])
   })
 
@@ -114,15 +115,106 @@ describe('POST /api/enquiries', () => {
 })
 
 describe('GET /contact', () => {
-  it('pre-selects the package from ?package=', async () => {
-    const html = await (await app.request('/contact?package=p1', {}, testEnv)).text()
-    expect(html).toContain(`<option value="${packageId}" selected="">P1`)
+  it('is a general message form without package dropdowns', async () => {
+    const html = await (await app.request('/contact', {}, testEnv)).text()
+    expect(html).toContain('name="message"')
+    expect(html).not.toContain('name="package_id"')
+  })
+})
+
+describe('POST /api/enquiries/booking', () => {
+  const day = todayInMalaysia()
+  const booking = (over: Record<string, string> = {}) => {
+    const f = new URLSearchParams({ service: 'in_house', cuisine: 'arab', package: 'p1', ...valid, event_date: day, event_time: '19:30', pax: '100', branch_id: '', ...over })
+    if (!f.get('branch_id')) f.set('branch_id', String(branchId))
+    if (!('noChoice' in over)) f.append(`g${groupId}`, String(lambId))
+    f.delete('noChoice')
+    return f
+  }
+  const send = (f: URLSearchParams, query = '') => post(f, query, testEnv, '/api/enquiries/booking')
+
+  it('saves an in-house booking with the server-side estimate and menu choices', async () => {
+    siteverify(true)
+    const res = await send(booking(), '?lang=bm')
+    expect(res.status).toBe(303)
+    expect(res.headers.get('Location')).toBe('/packages?sent=1&service=in_house&estimate=350000&lang=bm')
+    const [saved] = await listEnquiries(db)
+    expect(saved).toMatchObject({
+      service_type: 'in_house', branch_id: branchId, package_id: packageId, event_time: '19:30', pax: 100,
+      estimate_sen: 350000, menu_choices: { [groupId]: [lambId] }, address_line: null, status: 'new',
+    })
+  })
+
+  it('saves an outside booking with its address and no branch', async () => {
+    siteverify(true)
+    const f = booking({ service: 'outside', address_line: '12 Jalan Mawar', postcode: '40150', city: 'Shah Alam', state: 'Selangor', setup_notes: 'Lift to 3rd floor' })
+    f.delete('branch_id')
+    expect((await send(f)).status).toBe(303)
+    const [saved] = await listEnquiries(db)
+    expect(saved).toMatchObject({ service_type: 'outside', branch_id: null, postcode: '40150', city: 'Shah Alam', setup_notes: 'Lift to 3rd floor', estimate_sen: 350000 })
+  })
+
+  it('rejects outside catering without an address', async () => {
+    const fetch = siteverify(true)
+    const res = await send(booking({ service: 'outside', postcode: '123' }))
+    expect(res.status).toBe(400)
+    const html = await res.text()
+    expect(html).toContain('Please enter the event address.')
+    expect(html).toContain('Please enter a 5-digit postcode.')
+    expect(fetch).not.toHaveBeenCalled()
+    expect(await listEnquiries(db)).toEqual([])
+  })
+
+  it('rejects more guests than the hall holds, and fewer than the package minimum', async () => {
+    siteverify(true)
+    for (const pax of ['150', '10']) {
+      const res = await send(booking({ pax }))
+      expect(res.status).toBe(400)
+      expect(await res.text()).toContain('fits this package and venue')
+    }
+    expect(await listEnquiries(db)).toEqual([])
+  })
+
+  it('rejects a branch without a hall', async () => {
+    siteverify(true)
+    const noHall = await createBranch(db, { slug: 'b', name: 'B', name_bm: null, address: null, phone: null, maps_link: null, has_hall: false, hall_capacity: null, image_id: null, sort_order: 0, status: 'published' })
+    const res = await send(booking({ branch_id: String(noHall) }))
+    expect(res.status).toBe(400)
+    expect(await res.text()).toContain('Please choose a branch from the list.')
+  })
+
+  it('sends the visitor back to the menu step when choices are missing', async () => {
+    siteverify(true)
+    const res = await send(booking({ noChoice: '1' }))
+    expect(res.status).toBe(400)
+    expect(await res.text()).toContain('Customise Your Menu')
+    expect(await listEnquiries(db)).toEqual([])
+  })
+
+  it('does not save when Turnstile fails', async () => {
+    siteverify(false)
+    const res = await send(booking())
+    expect(res.status).toBe(400)
+    expect(await res.text()).toContain('could not verify that you are human')
+    expect(await listEnquiries(db)).toEqual([])
+  })
+})
+
+describe('GET /packages?sent=1', () => {
+  it('shows the estimate from the redirect', async () => {
+    const html = await (await app.request('/packages?sent=1&service=outside&estimate=350000', {}, testEnv)).text()
+    expect(html).toContain('RM 3,500')
+    expect(html).toContain('delivery fee')
   })
 })
 
 describe('alert email', () => {
-  const input = { name: 'Aisha', phone: '012', email: 'a@example.com', event_date: null, pax: null, branch_id: null, cuisine_id: null, package_id: null, message: null }
-  const noOptions = { branches: [], cuisines: [], packages: [] }
+  const input: EnquiryInput = {
+    name: 'Aisha', phone: '012', email: 'a@example.com', service_type: null, event_date: null, event_time: null, pax: null,
+    branch_id: null, cuisine_id: null, package_id: null, menu_choices: null, address_line: null, postcode: null, city: null,
+    state: null, setup_notes: null, message: null, estimate_sen: null,
+  }
+  const noOptions = {}
 
   it('sends the alert and marks the enquiry notified', async () => {
     const id = await createEnquiry(db, input)
@@ -148,10 +240,17 @@ describe('alert email', () => {
   })
 
   it('lists filled fields with names and prices', () => {
-    const o = { branches: [{ id: 1, name: 'Shah Alam' }], cuisines: [], packages: [{ id: 2, name: 'Kabsa Feast', price_sen: 3500 }] } as never
-    const m = enquiryAlert(7, { name: 'Aisha', phone: '012', email: null, event_date: null, pax: 80, branch_id: 1, cuisine_id: null, package_id: 2, message: null }, o)
+    const e = { ...input, email: null, service_type: 'outside' as const, pax: 80, postcode: '40150', city: 'Shah Alam', estimate_sen: 280000 }
+    const m = enquiryAlert(7, e, { package: { name: 'Kabsa Feast', price_sen: 3500 }, dishes: ['Lamb Mandi'] })
     expect(m.subject).toBe('New enquiry #7 from Aisha')
-    expect(m.text).toBe('Name: Aisha\nPhone: 012\nGuests: 80\nBranch: Shah Alam\nPackage: Kabsa Feast (RM 35 / pax)')
+    expect(m.text).toBe(
+      'Name: Aisha\nPhone: 012\nWhere: At their place (outside catering)\nGuests: 80\nAddress: 40150 Shah Alam\n' +
+        'Package: Kabsa Feast (RM 35 / pax)\nMenu choices: Lamb Mandi\nEstimate: RM 2,800 + delivery fee',
+    )
+  })
+
+  it('marks a general message', () => {
+    expect(enquiryAlert(1, input).text).toContain('Where: General message')
   })
 })
 
@@ -160,7 +259,7 @@ describe('enquirySchema', () => {
 
   it('turns empty optional fields into null', () => {
     const r = parse({ email: '', pax: ' ', event_date: '', message: '' })
-    expect(r.success && r.data).toMatchObject({ email: null, pax: null, event_date: null, message: null, package_id: null })
+    expect(r.success && r.data).toMatchObject({ email: null, pax: null, event_date: null, message: null })
   })
 
   it('accepts today and rejects past or malformed dates', () => {

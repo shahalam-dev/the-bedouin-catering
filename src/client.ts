@@ -1,5 +1,6 @@
 /// <reference lib="dom" />
 // Enhancement only: the site works without this file.
+import { formatRM } from './lib/format'
 
 // Header shadow once the page has scrolled.
 const header = document.querySelector('.site-header')
@@ -43,4 +44,20 @@ if (heroVideo && hero) {
     if (document.readyState === 'complete') play()
     else window.addEventListener('load', play, { once: true })
   }
+}
+
+// Package selector, details step: live estimate (price per pax x guests). The server saves its own figure.
+const estimate = document.querySelector<HTMLElement>('[data-estimate]')
+const paxInput = document.querySelector<HTMLInputElement>('#pax')
+const estimateValue = estimate?.querySelector('[data-estimate-value]')
+if (estimate && paxInput && estimateValue) {
+  const price = Number(estimate.dataset.estimate)
+  const update = () => {
+    const pax = Number(paxInput.value)
+    estimateValue.textContent =
+      Number.isInteger(pax) && pax > 0
+        ? (estimate.dataset.template ?? '').replace('{total}', formatRM(price * pax)).replace('{n}', String(pax))
+        : (estimate.dataset.hint ?? '')
+  }
+  paxInput.addEventListener('input', update)
 }

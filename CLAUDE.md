@@ -1,6 +1,6 @@
 # Catering Website + CMS
 
-Public catering website (packages, menu, occasions, enquiry form) plus an admin CMS for the client's staff.
+Public catering website (packages, menu, occasions, package selector + enquiry form) plus an admin CMS for the client's staff.
 Everything runs on Cloudflare: one Worker built with Hono, server-rendered with `hono/jsx`.
 
 ## Stack (do not swap without asking)
@@ -24,9 +24,9 @@ Everything runs on Cloudflare: one Worker built with Hono, server-rendered with 
 src/
   index.tsx            # Hono app: mounts routes, middleware, error handler
   routes/
-    public/            # home, packages, package selector, menu, occasions, contact
+    public/            # home, package selector, menu, occasions, contact
     admin/             # CMS pages (behind auth)
-    api/               # enquiry POST, image upload, JSON endpoints used by admin
+    api/               # enquiry POSTs (contact message, selector booking), image upload
   views/
     layouts/           # PublicLayout, AdminLayout (jsxRenderer)
     components/        # Header, Footer, PackageCard, CategoryCard, MenuCard, Stepper, FormField, StatusPill...
@@ -43,14 +43,16 @@ docs/design-system.md  # the visual spec: colours, type, components. Follow it f
 - Access the database only through `src/db/*`. Always use `prepare(...).bind(...)`; never build SQL with string concatenation.
 - Prices are stored as integer sen (`price_sen`), formatted as `RM 35 / pax` in views only.
 - Images: admin uploads go to R2 under `packages/`, `menu/`, `gallery/`. Serve them via `/media/:key` with long cache headers. Every image row stores alt text, and the admin form requires it.
-- Public site works without JavaScript. The package selector (branch → cuisine → package) is a multi-step server-rendered form using query params; add small client scripts only for enhancement.
+- Public site works without JavaScript. The package selector (event location → cuisine → package → menu choices → event details) is a multi-step server-rendered form using query params; the last step POSTs to `/api/enquiries/booking`. Add small client scripts only for enhancement.
+- Branches are venues only (in-house events, `has_hall`). Packages do not belong to a branch; same price at every branch. The booking estimate (`price_sen × pax`) is computed on the server.
 - Admin auth: `/admin/*` is protected by Cloudflare Access (preferred). If Access is not used, fall back to session login in `src/lib/auth.ts` (PBKDF2 via Web Crypto, session id in KV, `HttpOnly; Secure; SameSite=Lax` cookie) plus CSRF checks on POSTs.
 - After a CMS write, purge cached public pages that show that content.
 - Enquiries: validate, verify Turnstile, save to D1, then notify the client (email). A failed notification must not lose the enquiry.
 
 ## Domain model (D1)
-`branches`, `cuisines`, `packages` (branch_id, cuisine_id, name, price_sen, min_pax, inclusions JSON, is_popular, status), `menu_items`, `occasions`, `testimonials`, `media`, `enquiries`, `admin_users`, `settings`.
+`branches` (venue: address, phone, maps_link, has_hall, hall_capacity), `cuisines`, `packages` (cuisine_id, service_type `in_house|outside|both`, name, price_sen, min_pax, max_pax, inclusions JSON, is_popular, status), `package_groups` + `package_group_items` ("choose N" dishes from `menu_items`), `menu_items`, `occasions`, `testimonials`, `media`, `enquiries`, `admin_users`, `settings`.
 Status values: `published` | `draft` | `hidden`. Public routes show only `published`.
+Enquiries: `service_type` NULL = general /contact message; booking fields (event_time, address, menu_choices JSON, estimate_sen); staff fields (delivery_fee_sen, decline_reason, admin_notes). Status `new | quoted | confirmed | declined` (declined needs a reason).
 
 ## UI rules
 - Follow `docs/design-system.md` exactly: crimson `#A81E2B` / ink `#111111`, Cormorant Garamond headings, Montserrat body, Pinyon Script only for the hero title and the occasion strip.

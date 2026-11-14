@@ -1,10 +1,9 @@
 import { useI18n } from '../../lib/i18n'
 import { CheckIcon } from './Icons'
 
-/** Package selector steps. `current` is 0, 1 or 2. */
-export const Stepper = ({ current }: { current: number }) => {
+/** Package selector steps. `current` is the index of the active label. */
+export const Stepper = ({ labels, current }: { labels: string[]; current: number }) => {
   const { t } = useI18n()
-  const labels = [t.packages.steps.branch, t.packages.steps.cuisine, t.packages.steps.package]
   return (
     <ol class="stepper" aria-label={t.packages.stepsLabel}>
       {labels.map((label, i) => {

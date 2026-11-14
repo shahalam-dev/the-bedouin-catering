@@ -5,6 +5,7 @@ import { AdminLayout } from '../../views/layouts/AdminLayout'
 import { contentRoutes, resources } from './content'
 import enquiries from './enquiries'
 import media from './media'
+import packageGroups from './package-groups'
 
 const admin = new Hono<AdminEnv>()
 
@@ -18,6 +19,7 @@ admin.use('*', requireAdmin, csrf(), AdminLayout)
 admin.get('/', (c) => c.redirect('/admin/enquiries'))
 admin.route('/enquiries', enquiries)
 admin.route('/media', media)
+admin.route('/packages/:packageId{[0-9]+}/groups', packageGroups)
 for (const r of resources) admin.route(`/${r.key}`, contentRoutes(r))
 
 export default admin

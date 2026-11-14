@@ -159,9 +159,10 @@ body.admin {
   background: var(--muted);
 }
 .status-pill--published::before,
-.status-pill--closed::before { background: var(--success); }
+.status-pill--confirmed::before { background: var(--success); }
 .status-pill--hidden::before,
-.status-pill--contacted::before { background: var(--warning); }
+.status-pill--quoted::before { background: var(--warning); }
+.status-pill--declined::before { background: var(--error); }
 .status-pill--new::before { background: var(--primary); }
 
 .checkbox {

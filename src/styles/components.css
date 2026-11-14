@@ -458,7 +458,7 @@
 .stepper {
   display: flex;
   justify-content: center;
-  max-width: 560px;
+  max-width: 720px;
   margin: 0 auto var(--space-6);
   padding: 0;
   list-style: none;

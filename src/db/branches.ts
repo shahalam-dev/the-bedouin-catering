@@ -8,6 +8,9 @@ export type Branch = {
   name_bm: string | null
   address: string | null
   phone: string | null
+  maps_link: string | null
+  has_hall: boolean
+  hall_capacity: number | null
   image_id: number | null
   sort_order: number
   status: Status
@@ -16,6 +19,9 @@ export type Branch = {
 }
 
 export type BranchInput = Omit<Branch, 'id' | 'created_at' | 'updated_at'>
+
+type Row<T> = Omit<T, 'has_hall'> & { has_hall: number }
+const fromRow = <T extends Branch>(r: Row<T>): T => ({ ...r, has_hall: r.has_hall === 1 }) as T
 
 /** Name in the visitor's language; BM falls back to English when not filled in. */
 export const branchInLang = <T extends Branch>(b: T, lang: Lang): T => (lang === 'bm' ? { ...b, name: b.name_bm || b.name } : b)
@@ -27,33 +33,43 @@ export async function listPublishedBranches(db: D1Database): Promise<(Branch & W
        LEFT JOIN media m ON m.id = b.image_id
        WHERE b.status = 'published' ORDER BY b.sort_order, b.name`,
     )
-    .all<Branch & WithImage>()
-  return results
+    .all<Row<Branch & WithImage>>()
+  return results.map(fromRow)
+}
+
+/** Venues for in-house events: published branches with a hall. */
+export async function listHallBranches(db: D1Database): Promise<Branch[]> {
+  const { results } = await db
+    .prepare("SELECT * FROM branches WHERE status = 'published' AND has_hall = 1 ORDER BY sort_order, name")
+    .all<Row<Branch>>()
+  return results.map(fromRow)
 }
 
 export async function listBranches(db: D1Database): Promise<Branch[]> {
-  const { results } = await db.prepare('SELECT * FROM branches ORDER BY sort_order, name').all<Branch>()
-  return results
+  const { results } = await db.prepare('SELECT * FROM branches ORDER BY sort_order, name').all<Row<Branch>>()
+  return results.map(fromRow)
 }
 
-export function getBranchById(db: D1Database, id: number): Promise<Branch | null> {
-  return db.prepare('SELECT * FROM branches WHERE id = ?').bind(id).first<Branch>()
+export async function getBranchById(db: D1Database, id: number): Promise<Branch | null> {
+  const row = await db.prepare('SELECT * FROM branches WHERE id = ?').bind(id).first<Row<Branch>>()
+  return row ? fromRow(row) : null
 }
 
-export function getPublishedBranchBySlug(db: D1Database, slug: string): Promise<Branch | null> {
-  return db
+export async function getPublishedBranchBySlug(db: D1Database, slug: string): Promise<Branch | null> {
+  const row = await db
     .prepare("SELECT * FROM branches WHERE slug = ? AND status = 'published'")
     .bind(slug)
-    .first<Branch>()
+    .first<Row<Branch>>()
+  return row ? fromRow(row) : null
 }
 
 export async function createBranch(db: D1Database, b: BranchInput): Promise<number> {
   const row = await db
     .prepare(
-      `INSERT INTO branches (slug, name, name_bm, address, phone, image_id, sort_order, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+      `INSERT INTO branches (slug, name, name_bm, address, phone, maps_link, has_hall, hall_capacity, image_id, sort_order, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
     )
-    .bind(b.slug, b.name, b.name_bm, b.address, b.phone, b.image_id, b.sort_order, b.status)
+    .bind(b.slug, b.name, b.name_bm, b.address, b.phone, b.maps_link, b.has_hall ? 1 : 0, b.hall_capacity, b.image_id, b.sort_order, b.status)
     .first<{ id: number }>()
   return row!.id
 }
@@ -61,11 +77,12 @@ export async function createBranch(db: D1Database, b: BranchInput): Promise<numb
 export async function updateBranch(db: D1Database, id: number, b: BranchInput): Promise<boolean> {
   const r = await db
     .prepare(
-      `UPDATE branches SET slug = ?, name = ?, name_bm = ?, address = ?, phone = ?, image_id = ?, sort_order = ?, status = ?,
+      `UPDATE branches SET slug = ?, name = ?, name_bm = ?, address = ?, phone = ?, maps_link = ?, has_hall = ?, hall_capacity = ?,
+         image_id = ?, sort_order = ?, status = ?,
          updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
        WHERE id = ?`,
     )
-    .bind(b.slug, b.name, b.name_bm, b.address, b.phone, b.image_id, b.sort_order, b.status, id)
+    .bind(b.slug, b.name, b.name_bm, b.address, b.phone, b.maps_link, b.has_hall ? 1 : 0, b.hall_capacity, b.image_id, b.sort_order, b.status, id)
     .run()
   return changed(r)
 }
@@ -78,7 +95,6 @@ export async function setBranchStatus(db: D1Database, id: number, status: Status
   return changed(r)
 }
 
-/** Throws a FOREIGN KEY error while packages still use this branch. */
 export async function deleteBranch(db: D1Database, id: number): Promise<boolean> {
   return changed(await db.prepare('DELETE FROM branches WHERE id = ?').bind(id).run())
 }
