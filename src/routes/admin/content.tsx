@@ -14,7 +14,7 @@ import type { Status } from '../../db/shared'
 import type { AdminEnv } from '../../lib/auth'
 import { formatRM } from '../../lib/format'
 import { adminT } from '../../lib/i18n'
-import { imgUrl, storeUpload } from '../../lib/images'
+import { imgUrl, storePdf, storeUpload } from '../../lib/images'
 import {
   branchSchema,
   clientSchema,
@@ -33,7 +33,7 @@ import { StatusPill } from '../../views/components/StatusPill'
 // One editor for every "content" table. Each table is described by a Resource below:
 // its schema, form fields and db functions. Validation lives in the zod schemas.
 
-type Kind = 'text' | 'slug' | 'textarea' | 'int' | 'price' | 'lines' | 'checkbox' | 'status' | 'service' | 'cuisine' | 'rating' | 'upload'
+type Kind = 'text' | 'slug' | 'textarea' | 'int' | 'price' | 'lines' | 'checkbox' | 'status' | 'service' | 'cuisine' | 'rating' | 'upload' | 'pdf'
 type Field = { name: string; kind: Kind; required?: boolean; /** Overrides adminT.fields[name]. */ label?: string; /** Overrides the error for its kind. */ error?: string }
 type Row = { id: number; name: string; status: Status } & Record<string, unknown>
 type Values = Record<string, string>
@@ -94,9 +94,8 @@ export const resources: Resource[] = [
       { name: 'max_pax', kind: 'int', error: adminT.errors.maxPax },
       { name: 'inclusions', kind: 'lines' },
       { name: 'inclusions_bm', kind: 'lines' },
-      { name: 'description', kind: 'textarea' },
-      { name: 'description_bm', kind: 'textarea' },
       { name: 'is_popular', kind: 'checkbox' },
+      { name: 'pdf_key', kind: 'pdf' },
       ...meta,
     ],
     list: listPackages,
@@ -115,9 +114,8 @@ export const resources: Resource[] = [
       { name: 'cuisine_id', kind: 'cuisine' },
       { name: 'category', kind: 'text' },
       { name: 'price_sen', kind: 'price' },
-      { name: 'description', kind: 'textarea' },
-      { name: 'description_bm', kind: 'textarea' },
       { name: 'is_bestseller', kind: 'checkbox' },
+      { name: 'pdf_key', kind: 'pdf' },
       ...meta,
     ],
     list: listMenuItems,
@@ -239,6 +237,7 @@ const errorFor = (f: Field): string => {
     case 'int': return e.int
     case 'price': return e.price
     case 'lines': return e.lines
+    case 'pdf': return adminT.media.errors.pdf
     default: return e.select
   }
 }
@@ -313,6 +312,24 @@ const Control = ({ f, value, error, options }: { f: Field; value: string; error?
   )
 }
 
+/** Upload a details PDF; the current one (hidden field) is kept unless a new file is chosen. */
+const PdfField = ({ value, error }: { value: string; error?: string }) => {
+  const t = adminT.media
+  return (
+    <FormField id="pdf_file" label={t.pdf} error={error}>
+      <input type="hidden" name="pdf_key" value={value} />
+      {value && (
+        <p class="caption">
+          <a href={`/media/${value}`} target="_blank" rel="noopener">
+            {t.currentPdf}
+          </a>
+        </p>
+      )}
+      <input id="pdf_file" name="pdf_file" type="file" class="input" accept="application/pdf,.pdf" {...fieldAria('pdf_file', error)} />
+    </FormField>
+  )
+}
+
 /** Upload a new image, or pick one from the library (radio cards with thumbnails). */
 const ImagePicker = ({ value, alt, errors, media }: { value: string; alt: string; errors: Errors; media: Media[] }) => {
   const t = adminT.media
@@ -369,8 +386,10 @@ const FormPage = ({ r, values, errors, options, id }: FormProps) => {
         )}
         <div class="form__grid">
           {r.fields.map((f) => (
-            <div class={f.kind === 'textarea' || f.kind === 'lines' || f.kind === 'upload' ? 'form__wide' : undefined}>
-              {f.kind === 'upload' ? (
+            <div class={f.kind === 'textarea' || f.kind === 'lines' || f.kind === 'upload' || f.kind === 'pdf' ? 'form__wide' : undefined}>
+              {f.kind === 'pdf' ? (
+                <PdfField value={values.pdf_key ?? ''} error={errors.pdf_file} />
+              ) : f.kind === 'upload' ? (
                 <ImagePicker value={values[f.name] ?? ''} alt={values.image_alt ?? ''} errors={errors} media={options.media.filter((m) => m.folder === r.uploadFolder)} />
               ) : (
                 <Control f={f} value={values[f.name] ?? ''} error={errors[f.name]} options={options} />
@@ -461,6 +480,7 @@ export function contentRoutes(r: Resource) {
     const errors: Errors = Object.fromEntries(r.fields.filter((f) => bad.has(f.name)).map((f) => [f.name, errorFor(f)]))
     if (bad.has('image_file')) errors.image_file = adminT.media.errors.file
     if (bad.has('image_alt')) errors.image_alt = adminT.media.errors.alt
+    if (bad.has('pdf_file') || bad.has('pdf_key')) errors.pdf_file = adminT.media.errors.pdf
     const id = c.req.param('id')
     return renderForm(c as unknown as Context<AdminEnv>, result.data as Values, errors, id ? Number(id) : undefined)
   })
@@ -474,13 +494,19 @@ export function contentRoutes(r: Resource) {
       if (typeof stored === 'string') return renderForm(c, await form(), { image_file: adminT.media[stored] }, id)
       input.image_id = stored
     }
+    if (input.pdf_file instanceof File) {
+      // shortcut: a replaced PDF stays in R2 unreferenced; add cleanup if storage ever matters.
+      const key = await storePdf(c.env, r.uploadFolder as 'packages' | 'menu', input.pdf_file)
+      if (key === 'notPdf') return renderForm(c, { ...(await form()), image_id: String(input.image_id ?? '') }, { pdf_file: adminT.media.errors.pdf }, id)
+      input.pdf_key = key
+    }
     let ok
     try {
       ok = id ? await r.update(c.env.DB, id, input) : await r.create(c.env.DB, input)
     } catch (e) {
       if (!isSlugTaken(e)) throw e
       // A just-uploaded image is in the library now: keep it selected rather than uploading it again.
-      const values = { ...(await form()), image_id: String(input.image_id ?? ''), image_alt: '' }
+      const values = { ...(await form()), image_id: String(input.image_id ?? ''), image_alt: '', pdf_key: String(input.pdf_key ?? '') }
       return renderForm(c, values, { slug: adminT.errors.slugTaken }, id)
     }
     if (!ok) return c.notFound()

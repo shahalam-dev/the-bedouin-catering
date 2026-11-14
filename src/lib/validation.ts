@@ -148,11 +148,23 @@ export const mediaUploadSchema = z.object({
   file: imageFile,
 })
 
+// An empty file input arrives as "" (or a nameless, empty File): no upload.
+const noFile = (v: unknown) => (v === '' || (v instanceof File && v.size === 0 && !v.name) ? undefined : v)
+
+export const MAX_PDF_BYTES = 20 * 1024 * 1024
+// Packages and menu items: an optional details PDF. The file's first bytes are checked when it is stored.
+const pdfUpload = {
+  pdf_file: z
+    .preprocess(noFile, z.instanceof(File).refine((f) => (f.type === 'application/pdf' || /\.pdf$/i.test(f.name)) && f.size > 0 && f.size <= MAX_PDF_BYTES).optional())
+    .transform((v) => v ?? null),
+  // The current PDF, sent back in a hidden field so saving without a new upload keeps it.
+  pdf_key: optional(z.string().regex(/^(?:packages|menu)\/[0-9a-f-]{36}\.pdf$/)),
+}
+
 // Forms with an optional image upload (cuisines, branches): a sent file becomes the image
 // (stored in that section's media folder) and needs alt text; otherwise image_id picks from the library.
 const imageUpload = {
-  // An empty file input arrives as "" (or a nameless, empty File): no upload.
-  image_file: z.preprocess((v) => (v === '' || (v instanceof File && v.size === 0 && !v.name) ? undefined : v), imageFile.optional()).transform((v) => v ?? null),
+  image_file: z.preprocess(noFile, imageFile.optional()).transform((v) => v ?? null),
   image_alt: z.string().trim().default(''),
 }
 const altNeeded = (v: { image_file: File | null; image_alt: string }) => !v.image_file || alt.safeParse(v.image_alt).success
@@ -209,9 +221,8 @@ export const menuItemSchema = z
     ...common,
     ...imageUpload,
     name_bm: text(120),
+    ...pdfUpload,
     cuisine_id: optional(id),
-    description: text(1000),
-    description_bm: text(1000),
     category: text(60),
     price_sen: optional(price),
     is_bestseller: checkbox,
@@ -225,9 +236,8 @@ export const packageSchema = z
     slug,
     name_bm: text(120),
     cuisine_id: id,
+    ...pdfUpload,
     service_type: z.enum(['in_house', 'outside', 'both']),
-    description: text(1000),
-    description_bm: text(1000),
     price_sen: price,
     min_pax: z.coerce.number().int().min(1).max(10_000),
     max_pax: optional(z.coerce.number().int().min(1).max(10_000)),

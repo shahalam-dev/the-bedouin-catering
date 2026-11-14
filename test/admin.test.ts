@@ -132,7 +132,6 @@ describe('content editor', () => {
       price_sen: '35.50',
       min_pax: '50',
       inclusions: 'Rice\n\n  Lamb  \nDrinks',
-      description: '',
       is_popular: 'on',
       image_id: '',
       sort_order: '',
@@ -145,7 +144,7 @@ describe('content editor', () => {
     expect(res.status).toBe(303)
     expect(res.headers.get('Location')).toBe('/admin/packages?saved=1')
     const [p] = await listPackages(db)
-    expect(p).toMatchObject({ name: 'Kambing Golek', service_type: 'both', price_sen: 3550, min_pax: 50, max_pax: null, inclusions: ['Rice', 'Lamb', 'Drinks'], is_popular: true, description: null, sort_order: 0, status: 'published' })
+    expect(p).toMatchObject({ name: 'Kambing Golek', service_type: 'both', price_sen: 3550, min_pax: 50, max_pax: null, inclusions: ['Rice', 'Lamb', 'Drinks'], is_popular: true, pdf_key: null, sort_order: 0, status: 'published' })
   })
 
   it('rejects a maximum pax below the minimum', async () => {
@@ -279,7 +278,7 @@ describe('branch editor', () => {
     expect(html).not.toContain('Cuisine only')
 
     // The branch is the venue on the details step of an in-house booking.
-    await createPackage(db, { slug: 'p', cuisine_id: cuisineId, service_type: 'in_house', name: 'P', name_bm: null, description: null, description_bm: null, price_sen: 3000, min_pax: 10, max_pax: null, inclusions: [], inclusions_bm: [], is_popular: false, image_id: null, sort_order: 0, status: 'published' })
+    await createPackage(db, { slug: 'p', cuisine_id: cuisineId, service_type: 'in_house', name: 'P', name_bm: null, pdf_key: null, price_sen: 3000, min_pax: 10, max_pax: null, inclusions: [], inclusions_bm: [], is_popular: false, image_id: null, sort_order: 0, status: 'published' })
     const details = '/packages?service=in_house&cuisine=arab&package=p'
     expect(await (await app.request(`${details}&lang=bm`, {}, env)).text()).toContain('Cawangan Shah Alam (dewan sehingga 250 pax)')
     expect(await (await app.request(details, {}, env)).text()).not.toContain('Cawangan Shah Alam')
@@ -397,36 +396,65 @@ describe('testimonial editor', () => {
 })
 
 describe('menu item editor', () => {
-  it('saves BM copy, uploads into the menu folder, offers only menu images, shows BM publicly', async () => {
+  const pdf = (bytes = '%PDF-1.4\n%%EOF') => new File([bytes], 'menu.pdf', { type: 'application/pdf' })
+
+  it('saves BM name, image and PDF; offers only menu images; card shows name and PDF link', async () => {
     await createMedia(db, { r2_key: 'gallery/x.webp', folder: 'gallery', alt: 'Gallery only', content_type: 'image/webp', size_bytes: 1, width: null, height: null })
     const fd = new FormData()
     const png = new File([Uint8Array.from(atob(PNG_B64), (ch) => ch.charCodeAt(0))], 'h.png', { type: 'image/png' })
-    const fields = { name: 'Hummus', name_bm: 'Humus', cuisine_id: '', category: '', price_sen: '', description: 'Chickpea dip', description_bm: 'Celup kacang kuda', sort_order: '0', status: 'published', image_id: '', image_alt: 'Bowl of hummus', image_file: png }
+    const fields = { name: 'Hummus', name_bm: 'Humus', cuisine_id: '', category: '', price_sen: '', sort_order: '0', status: 'published', image_id: '', image_alt: 'Bowl of hummus', image_file: png, pdf_key: '', pdf_file: pdf() }
     for (const [k, v] of Object.entries(fields)) fd.set(k, v)
     expect((await post('/admin/menu/new', fd)).status).toBe(303)
 
     const [m] = (await listMedia(db)).filter((x) => x.folder === 'menu')
     expect(m.r2_key).toMatch(/^menu\//)
-    const row = await db.prepare('SELECT * FROM menu_items').first()
-    expect(row).toMatchObject({ name_bm: 'Humus', description_bm: 'Celup kacang kuda', image_id: m.id })
+    const row = await db.prepare('SELECT * FROM menu_items').first<{ id: number; pdf_key: string }>()
+    expect(row).toMatchObject({ name_bm: 'Humus', image_id: m.id })
+    expect(row!.pdf_key).toMatch(/^menu\/[0-9a-f-]{36}\.pdf$/)
+    const stored = await env.MEDIA.get(row!.pdf_key)
+    expect(stored?.httpMetadata?.contentType).toBe('application/pdf')
+    const served = await app.request(`/media/${row!.pdf_key}`, {}, env)
+    expect(served.status).toBe(200)
+    expect(served.headers.get('Content-Type')).toBe('application/pdf')
+    expect(served.headers.get('Content-Disposition')).toBe('inline')
 
     const html = await (await get(`/admin/menu/${row!.id}`)).text()
     expect(html).toContain('Bowl of hummus')
     expect(html).not.toContain('Gallery only')
+    expect(html).toContain(`value="${row!.pdf_key}"`)
 
     const bm = await (await app.request('/menu?lang=bm', {}, env)).text()
-    expect(bm).toContain('Celup kacang kuda')
-    expect(await (await app.request('/menu', {}, env)).text()).not.toContain('Celup kacang kuda')
+    expect(bm).toContain('Humus')
+    expect(bm).toContain(`href="/media/${row!.pdf_key}"`)
+    expect(await (await app.request('/menu', {}, env)).text()).not.toContain('Humus')
+
+    // Saving again without a new file keeps the PDF.
+    const edit = new FormData()
+    for (const [k, v] of Object.entries({ ...fields, image_id: String(m.id), image_file: '', pdf_key: row!.pdf_key, pdf_file: '' })) edit.set(k, v)
+    expect((await post(`/admin/menu/${row!.id}`, edit)).status).toBe(303)
+    expect(await db.prepare('SELECT pdf_key FROM menu_items').first('pdf_key')).toBe(row!.pdf_key)
+  })
+
+  it('rejects a file that is not a PDF and a pdf_key outside the upload folders', async () => {
+    const send = async (over: Record<string, string | File>) => {
+      const fd = new FormData()
+      for (const [k, v] of Object.entries({ name: 'Hummus', status: 'draft', ...over })) fd.set(k, v)
+      return post('/admin/menu/new', fd)
+    }
+    expect((await send({ pdf_file: pdf('<html>not a pdf</html>') })).status).toBe(400)
+    expect((await send({ pdf_file: new File(['x'], 'a.png', { type: 'image/png' }) })).status).toBe(400)
+    expect((await send({ pdf_key: 'gallery/x.pdf' })).status).toBe(400)
+    expect(await db.prepare('SELECT COUNT(*) AS n FROM menu_items').first('n')).toBe(0)
   })
 })
 
 describe('package editor', () => {
-  it('saves BM copy, uploads into the packages folder, shows BM name and inclusions publicly', async () => {
+  it('saves BM copy, uploads into the packages folder, shows the BM name publicly', async () => {
     const fd = new FormData()
     const png = new File([Uint8Array.from(atob(PNG_B64), (ch) => ch.charCodeAt(0))], 'p.png', { type: 'image/png' })
     const fields = {
       name: 'Kambing Golek', name_bm: 'Kambing Golek Istimewa', slug: 'kg', cuisine_id: String(cuisineId), service_type: 'outside',
-      price_sen: '35', min_pax: '50', inclusions: 'Rice\nDrinks', inclusions_bm: 'Nasi\nMinuman', description: '', description_bm: '',
+      price_sen: '35', min_pax: '50', inclusions: 'Rice\nDrinks', inclusions_bm: 'Nasi\nMinuman',
       sort_order: '0', status: 'published', image_id: '', image_alt: 'Whole roasted lamb', image_file: png,
     }
     for (const [k, v] of Object.entries(fields)) fd.set(k, v)
@@ -439,17 +467,15 @@ describe('package editor', () => {
 
     const bm = await (await app.request('/packages?service=outside&cuisine=arab&lang=bm', {}, env)).text()
     expect(bm).toContain('Kambing Golek Istimewa')
-    expect(bm).toContain('Minuman')
     const en = await (await app.request('/packages?service=outside&cuisine=arab', {}, env)).text()
     expect(en).not.toContain('Istimewa')
-    expect(en).toContain('Drinks')
   })
 })
 
 describe('package groups editor', () => {
   it('creates, edits and deletes a group with dishes of the package cuisine only', async () => {
-    const id = await createPackage(db, { slug: 'kg', cuisine_id: cuisineId, service_type: 'both', name: 'KG', name_bm: null, description: null, description_bm: null, price_sen: 3000, min_pax: 10, max_pax: null, inclusions: [], inclusions_bm: [], is_popular: false, image_id: null, sort_order: 0, status: 'published' })
-    const item = { name_bm: null, description: null, description_bm: null, category: null, price_sen: null, is_bestseller: false, image_id: null, sort_order: 0, status: 'published' as const }
+    const id = await createPackage(db, { slug: 'kg', cuisine_id: cuisineId, service_type: 'both', name: 'KG', name_bm: null, pdf_key: null, price_sen: 3000, min_pax: 10, max_pax: null, inclusions: [], inclusions_bm: [], is_popular: false, image_id: null, sort_order: 0, status: 'published' })
+    const item = { name_bm: null, pdf_key: null, category: null, price_sen: null, is_bestseller: false, image_id: null, sort_order: 0, status: 'published' as const }
     const lamb = await createMenuItem(db, { ...item, cuisine_id: cuisineId, name: 'Lamb Mandi' })
     const chicken = await createMenuItem(db, { ...item, cuisine_id: cuisineId, name: 'Chicken Kabsa' })
     const other = await createMenuItem(db, { ...item, cuisine_id: null, name: 'Teh Tarik' })

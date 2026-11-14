@@ -62,3 +62,16 @@ export async function storeUpload(
     throw e
   }
 }
+
+/**
+ * Stores an uploaded PDF in R2 under `<folder>/` and returns its key,
+ * or 'notPdf' if the file does not start like a PDF (nothing is stored then).
+ */
+export async function storePdf(env: Env, folder: 'packages' | 'menu', file: File): Promise<string | 'notPdf'> {
+  const bytes = await file.arrayBuffer()
+  if (new TextDecoder().decode(bytes.slice(0, 5)) !== '%PDF-') return 'notPdf'
+  // A new random key per upload, so /media can cache it forever.
+  const key = `${folder}/${crypto.randomUUID()}.pdf`
+  await env.MEDIA.put(key, bytes, { httpMetadata: { contentType: 'application/pdf', contentDisposition: 'inline' } })
+  return key
+}
